@@ -17,38 +17,38 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 const STATUS_CONFIG = (theme: any) => ({
-  AVAILABLE: { 
-    bg: alpha('#ffffff', 0.03), 
-    border: '1px solid rgba(255,255,255,0.1)', 
-    color: alpha('#ffffff', 0.5), 
+  AVAILABLE: {
+    bg: alpha('#ffffff', 0.03),
+    border: '1px solid rgba(255,255,255,0.1)',
+    color: alpha('#ffffff', 0.5),
     cursor: 'pointer',
     hoverBg: alpha(theme.palette.primary.main, 0.1)
   },
-  SELECTED: { 
-    bg: theme.palette.primary.main, 
-    border: `1px solid ${theme.palette.primary.main}`, 
-    color: '#000', 
+  SELECTED: {
+    bg: theme.palette.primary.main,
+    border: `1px solid ${theme.palette.primary.main}`,
+    color: '#000',
     cursor: 'pointer',
     shadow: `0 0 15px ${alpha(theme.palette.primary.main, 0.6)}`
   },
-  LOCKED: { 
-    bg: alpha('#1e293b', 0.5), 
-    border: '1px solid rgba(255,255,255,0.03)', 
-    color: '#475569', 
-    cursor: 'not-allowed' 
+  LOCKED: {
+    bg: alpha('#1e293b', 0.5),
+    border: '1px solid rgba(255,255,255,0.03)',
+    color: '#475569',
+    cursor: 'not-allowed'
   },
-  MY_LOCK: { 
+  MY_LOCK: {
     bg: '#f59e0b', // Amber color for distinct ownership
-    border: '1px solid #f59e0b', 
-    color: '#000', 
+    border: '1px solid #f59e0b',
+    color: '#000',
     cursor: 'pointer',
     shadow: '0 0 15px rgba(245, 158, 11, 0.4)'
   },
-  SOLD: { 
-    bg: alpha('#ef4444', 0.05), 
-    border: '1px solid rgba(239, 68, 68, 0.2)', 
-    color: alpha('#ef4444', 0.4), 
-    cursor: 'not-allowed' 
+  SOLD: {
+    bg: alpha('#ef4444', 0.05),
+    border: '1px solid rgba(239, 68, 68, 0.2)',
+    color: alpha('#ef4444', 0.4),
+    cursor: 'not-allowed'
   },
 });
 
@@ -143,7 +143,7 @@ export default function SeatMap({ eventId }: { eventId: number }) {
       if (p.eventId === eventId) updateSeats(p.seats);
     });
     return () => { socket.emit('leaveEvent', { eventId }); socket.disconnect(); };
-  }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [eventId]);
 
   const zoneMap = useMemo(() => {
     const m = new Map<number, { zoneName: string; price: number; rows: Map<string, SeatData[]> }>();
@@ -308,9 +308,9 @@ export default function SeatMap({ eventId }: { eventId: number }) {
                               borderRadius: '4px',
                               fontSize: 10, fontWeight: 900, userSelect: 'none',
                               transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                              backgroundColor: st.bg, 
-                              border: st.border, 
-                              color: st.color, 
+                              backgroundColor: st.bg,
+                              border: st.border,
+                              color: st.color,
                               cursor: st.cursor,
                               boxShadow: (st as any).shadow || 'none',
                               '&:hover': cl ? {

@@ -26,53 +26,7 @@ Nền tảng đặt vé trực tuyến hiệu năng cao (High-concurrency), hỗ
 Dự án TicketRush được xây dựng theo kiến trúc **Monolith hiện đại** (Modular Monolith) với sự tách biệt rõ ràng giữa các tầng (Layered Architecture) để đảm bảo khả năng mở rộng và xử lý tranh chấp dữ liệu ở mức độ cao.
 
 ### Sơ đồ tổng quát
-```mermaid
-graph TB
-    subgraph "Frontend (Next.js 14 - App Router)"
-        Customer[Customer Portal]
-        Admin[Admin Dashboard]
-        RealTime[Real-time Seat Map]
-        Analytics[Visual Analytics]
-    end
-
-    subgraph "Backend (NestJS 11)"
-        Gateway[REST API & Gateway]
-        WS[Socket.IO Gateway]
-        
-        subgraph "Core Business Logic"
-            Booking[Booking & Locking Service]
-            EventSvc[Event & Seat Config]
-            Stats[Analytics & Statistics]
-        end
-        
-        Cron[Cron Job Scheduler]
-    end
-
-    subgraph "Data Layer (MySQL 8 + Prisma)"
-        Prisma[Prisma ORM]
-        DB[(MySQL Database)]
-    end
-
-    Customer <--> Gateway
-    Admin <--> Gateway
-    RealTime <--> WS
-    Analytics <--> Gateway
-    
-    Gateway --> Booking
-    Gateway --> EventSvc
-    Gateway --> Stats
-    
-    WS <--> Booking
-    
-    Booking -- "Pessimistic Locking" --> Prisma
-    EventSvc --> Prisma
-    Stats --> Prisma
-    
-    Prisma --> DB
-    
-    Cron -- "Release Expired Seats" --> Booking
-    Booking -- "Broadcast Status" --> WS
-```
+![Kiến trúc hệ thống](./assets/architecture.png)
 
 ### Chi tiết các thành phần
 
@@ -135,16 +89,7 @@ npm run dev
 ### 1. Vòng đời của Ghế (Seat Lifecycle)
 Dựa trên yêu cầu khắt khe về tính nhất quán, mỗi ghế trong hệ thống trải qua các trạng thái sau:
 
-```mermaid
-stateDiagram-v2
-    [*] --> AVAILABLE : Khởi tạo / Giải phóng
-    AVAILABLE --> LOCKED : Khách hàng click chọn
-    note right of LOCKED : Khóa tạm thời 10 phút
-    LOCKED --> SOLD : Xác nhận thanh toán thành công
-    LOCKED --> AVAILABLE : Cron Job giải phóng (quá hạn)
-    LOCKED --> AVAILABLE : Người dùng hủy chọn
-    SOLD --> [*] : Hoàn tất đơn hàng
-```
+![Vòng đời của Ghế](./assets/seat_lifecycle.png)
 
 ### 2. Ngăn chặn Race Condition (Pessimistic Locking)
 Để xử lý hàng ngàn request cùng lúc cho một ghế (Flash Sale), hệ thống áp dụng cơ chế khóa bi quan:
