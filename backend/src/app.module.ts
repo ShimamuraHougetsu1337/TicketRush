@@ -6,6 +6,7 @@ import { CronModule } from './cron/cron.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { EventsModule } from './modules/events/events.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { EventsModule } from './modules/events/events.module';
     AuthModule,
     UsersModule,
     EventsModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule {}

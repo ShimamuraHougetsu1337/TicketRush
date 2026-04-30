@@ -44,6 +44,7 @@ export default function LoginPage() {
     } else {
       router.push('/');
       router.refresh();
+      // Giữ loading cho đến khi chuyển trang
     }
   };
 
@@ -80,7 +81,7 @@ export default function LoginPage() {
           >
             <LockIcon sx={{ color: '#0b0f19', fontSize: 32 }} />
           </Box>
-          
+
           <Typography variant="h4" fontWeight={900} sx={{ mb: 1, fontFamily: '"Outfit", sans-serif' }}>
             Welcome Back
           </Typography>
@@ -121,7 +122,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
               />
-              
+
               <Button
                 type="submit"
                 fullWidth

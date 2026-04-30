@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import {
   Box, Typography, Button, Chip, Paper, Divider,
   Snackbar, Alert, CircularProgress, Tooltip, Badge, Stack, alpha, useTheme,
@@ -9,6 +9,7 @@ import {
 import {
   EventSeat as SeatIcon, ShoppingCart as CartIcon,
   Lock as LockIcon, CheckCircle as SoldIcon, Delete as ClearIcon, InfoOutlined,
+  Timer as TimerIcon,
 } from '@mui/icons-material';
 import { io, Socket } from 'socket.io-client';
 import { useSeatStore, SeatData, SeatStatus } from '@/store/seat-store';
@@ -16,15 +17,93 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 const STATUS_CONFIG = (theme: any) => ({
-  AVAILABLE: { bg: alpha(theme.palette.primary.main, 0.1), border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`, color: theme.palette.primary.main, cursor: 'pointer' },
-  SELECTED: { bg: theme.palette.primary.main, border: `1px solid ${theme.palette.primary.main}`, color: '#0b0f19', cursor: 'pointer' },
-  LOCKED: { bg: alpha('#94a3b8', 0.1), border: '1px solid rgba(255,255,255,0.05)', color: '#64748b', cursor: 'not-allowed' },
-  MY_LOCK: { bg: theme.palette.secondary.main, border: `1px solid ${theme.palette.secondary.main}`, color: '#fff', cursor: 'pointer' },
-  SOLD: { bg: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'not-allowed' },
+  AVAILABLE: { 
+    bg: alpha('#ffffff', 0.03), 
+    border: '1px solid rgba(255,255,255,0.1)', 
+    color: alpha('#ffffff', 0.5), 
+    cursor: 'pointer',
+    hoverBg: alpha(theme.palette.primary.main, 0.1)
+  },
+  SELECTED: { 
+    bg: theme.palette.primary.main, 
+    border: `1px solid ${theme.palette.primary.main}`, 
+    color: '#000', 
+    cursor: 'pointer',
+    shadow: `0 0 15px ${alpha(theme.palette.primary.main, 0.6)}`
+  },
+  LOCKED: { 
+    bg: alpha('#1e293b', 0.5), 
+    border: '1px solid rgba(255,255,255,0.03)', 
+    color: '#475569', 
+    cursor: 'not-allowed' 
+  },
+  MY_LOCK: { 
+    bg: '#f59e0b', // Amber color for distinct ownership
+    border: '1px solid #f59e0b', 
+    color: '#000', 
+    cursor: 'pointer',
+    shadow: '0 0 15px rgba(245, 158, 11, 0.4)'
+  },
+  SOLD: { 
+    bg: alpha('#ef4444', 0.05), 
+    border: '1px solid rgba(239, 68, 68, 0.2)', 
+    color: alpha('#ef4444', 0.4), 
+    cursor: 'not-allowed' 
+  },
 });
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 const WS = process.env.NEXT_PUBLIC_WS_URL ?? 'http://localhost:8080/seats';
+
+// Countdown Sub-component
+function LockCountdown({ seats, currentUserId }: { seats: SeatData[], currentUserId: number | null }) {
+  const [timeLeft, setTimeLeft] = useState<string>('');
+
+  const myLockedSeats = useMemo(() =>
+    seats.filter(s => s.status === 'LOCKED' && s.lockedById === currentUserId && s.lockedAt),
+    [seats, currentUserId]
+  );
+
+  useEffect(() => {
+    if (myLockedSeats.length === 0) return;
+
+    const interval = setInterval(() => {
+      // Find the earliest lock time
+      const lockTimes = myLockedSeats.map(s => new Date(s.lockedAt!).getTime());
+      const earliestLock = Math.min(...lockTimes);
+      const expiryTime = earliestLock + 10 * 60 * 1000;
+      const now = new Date().getTime();
+      const diff = expiryTime - now;
+
+      if (diff <= 0) {
+        setTimeLeft('Expired');
+        clearInterval(interval);
+        window.location.reload(); // Refresh to release seats
+      } else {
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        setTimeLeft(`${mins}:${secs < 10 ? '0' : ''}${secs}`);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [myLockedSeats]);
+
+  if (myLockedSeats.length === 0) return null;
+
+  return (
+    <Box sx={{
+      display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1,
+      background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444',
+      borderRadius: 2, border: '1px solid rgba(239, 68, 68, 0.3)'
+    }}>
+      <TimerIcon fontSize="small" />
+      <Typography variant="body2" fontWeight={800}>
+        Time to checkout: {timeLeft}
+      </Typography>
+    </Box>
+  );
+}
 
 export default function SeatMap({ eventId }: { eventId: number }) {
   const theme = useTheme();
@@ -103,7 +182,15 @@ export default function SeatMap({ eventId }: { eventId: number }) {
     finally { setLoading(false); }
   };
 
-  const handleLock = () => doPost('/api/booking/lock', Array.from(selectedIds), `/checkout?eventId=${eventId}`);
+  const handleLock = () => {
+    if (selectedIds.size > 0) {
+      // If there are new seats to lock
+      doPost('/api/booking/lock', Array.from(selectedIds), `/checkout?eventId=${eventId}`);
+    } else if (myLocked > 0) {
+      // If only existing locked seats, just redirect
+      router.push(`/checkout?eventId=${eventId}`);
+    }
+  };
 
   const style = (s: SeatData) => {
     if (selectedIds.has(s.id)) return statusStyles.SELECTED;
@@ -131,28 +218,32 @@ export default function SeatMap({ eventId }: { eventId: number }) {
             Select Seats
           </Typography>
           <Box sx={{ display: 'flex', gap: 2.5, flexWrap: 'wrap' }}>
-            {([['AVAILABLE', 'Available'], ['SELECTED', 'Selected'], ['LOCKED', 'Occupied'], ['SOLD', 'Sold']] as const).map(([k, l]) => (
+            {([['AVAILABLE', 'Available'], ['SELECTED', 'Selected'], ['MY_LOCK', 'Your Seats'], ['LOCKED', 'Occupied'], ['SOLD', 'Sold']] as const).map(([k, l]) => (
               <Box key={k} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box sx={{
-                  width: 14, height: 14, borderRadius: '3px',
-                  backgroundColor: statusStyles[k].bg,
-                  border: statusStyles[k].border
+                  width: 14, height: 14, borderRadius: '2px',
+                  backgroundColor: (statusStyles as any)[k].bg,
+                  border: (statusStyles as any)[k].border,
+                  boxShadow: (statusStyles as any)[k].shadow || 'none'
                 }} />
-                <Typography variant="caption" fontWeight={600} color="text.secondary">{l}</Typography>
+                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.5px' }}>{l}</Typography>
               </Box>
             ))}
           </Box>
         </Box>
 
-        <Box sx={{
-          display: 'flex', alignItems: 'center', gap: 1.5, p: 2,
-          borderRadius: 3, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)'
-        }}>
-          <InfoOutlined color="primary" />
-          <Typography variant="body2" color="text.secondary">
-            Seats are held for <Box component="span" sx={{ color: 'white', fontWeight: 700 }}>10 minutes</Box> once locked.
-          </Typography>
-        </Box>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <LockCountdown seats={seats} currentUserId={currentUserId} />
+          <Box sx={{
+            display: 'flex', alignItems: 'center', gap: 1.5, p: 2,
+            borderRadius: 3, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)'
+          }}>
+            <InfoOutlined color="primary" />
+            <Typography variant="body2" color="text.secondary">
+              Seats are held for <Box component="span" sx={{ color: 'white', fontWeight: 700 }}>10 minutes</Box> once locked.
+            </Typography>
+          </Box>
+        </Stack>
       </Stack>
 
       {/* Stage */}
@@ -182,9 +273,28 @@ export default function SeatMap({ eventId }: { eventId: number }) {
           <Box sx={{ p: 4, overflowX: 'auto' }}>
             <Stack spacing={2}>
               {Array.from(rows.entries()).map(([rn, rs]) => (
-                <Stack key={rn} direction="row" spacing={2} alignItems="center">
-                  <Typography sx={{ width: 40, fontWeight: 800, color: 'text.secondary', fontSize: '0.8rem', textAlign: 'center' }}>{rn}</Typography>
-                  <Stack direction="row" spacing={1} sx={{ flex: 1, justifyContent: 'center' }}>
+                <Stack
+                  key={rn}
+                  direction="row"
+                  spacing={2}
+                  alignItems="center"
+                  justifyContent="center"
+                  sx={{ mb: 1 }}
+                >
+                  <Typography
+                    sx={{
+                      width: 30,
+                      fontWeight: 800,
+                      color: 'text.secondary',
+                      fontSize: '0.8rem',
+                      textAlign: 'right'
+                    }}
+                  >
+                    {rn}
+                  </Typography>
+
+                  {/* 4. Bỏ flex: 1 và justifyContent ở đây đi */}
+                  <Stack direction="row" spacing={1}>
                     {rs.map(seat => {
                       const st = style(seat); const cl = canClick(seat);
                       return (
@@ -195,17 +305,22 @@ export default function SeatMap({ eventId }: { eventId: number }) {
                               width: { xs: 28, sm: 34 },
                               height: { xs: 32, sm: 38 },
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              borderRadius: '8px 8px 4px 4px',
-                              fontSize: 11, fontWeight: 800, userSelect: 'none',
+                              borderRadius: '4px',
+                              fontSize: 10, fontWeight: 900, userSelect: 'none',
                               transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                              backgroundColor: st.bg, border: st.border, color: st.color, cursor: st.cursor,
+                              backgroundColor: st.bg, 
+                              border: st.border, 
+                              color: st.color, 
+                              cursor: st.cursor,
+                              boxShadow: (st as any).shadow || 'none',
                               '&:hover': cl ? {
-                                transform: 'scale(1.2) translateY(-4px)',
-                                boxShadow: `0 8px 15px ${alpha(theme.palette.primary.main, 0.3)}`,
+                                transform: 'translateY(-4px)',
+                                backgroundColor: (st as any).hoverBg || st.bg,
+                                borderColor: theme.palette.primary.main,
+                                boxShadow: `0 8px 15px ${alpha(theme.palette.primary.main, 0.2)}`,
                                 zIndex: 10
                               } : {},
                               ...(selectedIds.has(seat.id) && {
-                                boxShadow: `0 0 20px ${alpha(theme.palette.primary.main, 0.5)}`,
                                 animation: 'pulse 1.5s infinite'
                               })
                             }}
@@ -216,7 +331,6 @@ export default function SeatMap({ eventId }: { eventId: number }) {
                       );
                     })}
                   </Stack>
-                  <Typography sx={{ width: 40, fontWeight: 800, color: 'text.secondary', fontSize: '0.8rem', textAlign: 'center' }}>{rn}</Typography>
                 </Stack>
               ))}
             </Stack>
@@ -261,12 +375,12 @@ export default function SeatMap({ eventId }: { eventId: number }) {
 
           <Button
             variant="contained"
-            disabled={!selectedIds.size || loading}
+            disabled={(!selectedIds.size && myLocked === 0) || loading}
             onClick={handleLock}
-            startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <LockIcon />}
+            startIcon={loading ? <CircularProgress size={18} color="inherit" /> : (selectedIds.size > 0 ? <LockIcon /> : <CartIcon />)}
             sx={{ px: 4, py: 1.5, borderRadius: 4, fontSize: '0.9rem' }}
           >
-            Lock & Continue
+            {selectedIds.size > 0 ? 'Lock & Continue' : 'Continue to Checkout'}
           </Button>
         </Paper>
       )}

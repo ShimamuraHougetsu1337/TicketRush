@@ -1,5 +1,7 @@
-import { IsString, IsNotEmpty, IsDateString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsDateString, IsOptional, IsEnum, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { EventStatus } from '@prisma/client';
+import { CreateZoneDto } from './zone.dto';
 
 export class CreateEventDto {
   @IsString()
@@ -12,6 +14,11 @@ export class CreateEventDto {
   @IsOptional()
   @IsEnum(EventStatus)
   status?: EventStatus;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateZoneDto)
+  zones!: CreateZoneDto[];
 }
 
 export class UpdateEventDto {

@@ -24,6 +24,8 @@ export class AuthService {
       fullName: registerDto.fullName,
       email: registerDto.email,
       password: hashedPassword,
+      age: registerDto.age ? Number(registerDto.age) : undefined,
+      gender: registerDto.gender,
     });
 
     const payload = { sub: user.id, email: user.email, role: user.role };

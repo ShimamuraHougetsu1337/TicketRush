@@ -14,6 +14,8 @@ import {
   Stack,
   alpha,
   useTheme,
+  MenuItem,
+  Grid,
 } from '@mui/material';
 import Link from 'next/link';
 import { PersonAddAlt1 as RegisterIcon, ArrowForward } from '@mui/icons-material';
@@ -26,6 +28,8 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -38,7 +42,13 @@ export default function RegisterPage() {
       const res = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, email, password }),
+        body: JSON.stringify({
+          fullName,
+          email,
+          password,
+          age: age ? parseInt(age) : undefined,
+          gender: gender || undefined
+        }),
       });
 
       if (!res.ok) {
@@ -47,6 +57,7 @@ export default function RegisterPage() {
       }
 
       router.push('/login');
+      // Giữ loading cho đến khi chuyển trang
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
@@ -54,7 +65,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', background: 'radial-gradient(circle at 50% 50%, #1e293b 0%, #0b0f19 100%)' }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', py: 8, background: 'radial-gradient(circle at 50% 50%, #1e293b 0%, #0b0f19 100%)' }}>
       <Container maxWidth="xs">
         <Paper
           elevation={0}
@@ -86,15 +97,15 @@ export default function RegisterPage() {
           >
             <RegisterIcon sx={{ color: '#0b0f19', fontSize: 32 }} />
           </Box>
-          
+
           <Typography variant="h4" fontWeight={900} sx={{ mb: 1, fontFamily: '"Outfit", sans-serif' }}>
             Join TicketRush
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 4, textAlign: 'center' }}>
-            Create an account to start booking your favorite event tickets in real-time.
+            Create an account to start booking tickets.
           </Typography>
 
-          <Box sx={{ minHeight: 64, width: '100%', mb: 1 }}>
+          <Box sx={{ minHeight: 40, width: '100%', mb: 2 }}>
             {error && (
               <Alert severity="error" sx={{ width: '100%', borderRadius: 2, fontWeight: 700 }}>
                 {error}
@@ -108,7 +119,6 @@ export default function RegisterPage() {
                 required
                 fullWidth
                 label="Full Name"
-                placeholder="John Doe"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
@@ -118,22 +128,44 @@ export default function RegisterPage() {
                 fullWidth
                 label="Email Address"
                 autoComplete="email"
-                placeholder="john@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
               />
+
+              <Stack direction="row" spacing={2.5} sx={{ width: '100%' }}>
+                <TextField
+                  fullWidth
+                  label="Age"
+                  type="number"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+                />
+                <TextField
+                  fullWidth
+                  select
+                  label="Gender"
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+                >
+                  <MenuItem value="MALE">Male</MenuItem>
+                  <MenuItem value="FEMALE">Female</MenuItem>
+                  <MenuItem value="OTHER">Other</MenuItem>
+                </TextField>
+              </Stack>
+
               <TextField
                 required
                 fullWidth
                 label="Password"
                 type="password"
-                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
               />
-              
+
               <Button
                 type="submit"
                 fullWidth

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -12,6 +12,51 @@ import {
 import { Payment as PaymentIcon, Timer as TimerIcon, ConfirmationNumber, ShoppingBag, VerifiedUser as ShieldCheck } from '@mui/icons-material';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+// Countdown Sub-component for Checkout
+function CheckoutTimer({ seats, onExpire }: { seats: any[], onExpire: () => void }) {
+  const [timeLeft, setTimeLeft] = useState<string>('');
+  const theme = useTheme();
+
+  useEffect(() => {
+    if (seats.length === 0) return;
+
+    const interval = setInterval(() => {
+      // Find the earliest lock time among all seats in the order
+      const lockTimes = seats.map(s => new Date(s.lockedAt).getTime());
+      const earliestLock = Math.min(...lockTimes);
+      const expiryTime = earliestLock + 10 * 60 * 1000;
+      const now = new Date().getTime();
+      const diff = expiryTime - now;
+
+      if (diff <= 0) {
+        clearInterval(interval);
+        onExpire();
+      } else {
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        setTimeLeft(`${mins}:${secs < 10 ? '0' : ''}${secs}`);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [seats, onExpire]);
+
+  return (
+    <Chip
+      icon={<TimerIcon sx={{ fontSize: 16, color: 'inherit !important' }} />}
+      label={`Ends in ${timeLeft}`}
+      size="small"
+      sx={{ 
+        fontWeight: 900, 
+        background: alpha('#ef4444', 0.1), 
+        color: '#ef4444',
+        px: 1,
+        border: '1px solid rgba(239, 68, 68, 0.2)'
+      }}
+    />
+  );
+}
 
 function CheckoutContent() {
   const theme = useTheme();
@@ -25,6 +70,7 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -98,14 +144,14 @@ function CheckoutContent() {
     );
   }
 
-  if (seats.length === 0) {
+  if (seats.length === 0 || isExpired) {
     return (
       <Container maxWidth="sm" sx={{ py: 15, textAlign: 'center' }}>
         <Box sx={{ p: 4, borderRadius: 4, background: alpha(theme.palette.warning.main, 0.05), border: `1px dashed ${alpha(theme.palette.warning.main, 0.2)}`, mb: 4 }}>
           <TimerIcon sx={{ fontSize: 60, color: theme.palette.warning.main, mb: 2, opacity: 0.5 }} />
           <Typography variant="h5" fontWeight={800} gutterBottom sx={{ color: theme.palette.warning.main }}>Session Expired</Typography>
           <Typography color="text.secondary">
-            Your locked seats have been released. Please return to the event page to select them again.
+            Your locked seats have been released due to inactivity. Please return to the event page to select them again.
           </Typography>
         </Box>
         <Button variant="outlined" size="large" onClick={() => router.push(`/events/${eventId}`)}>
@@ -132,15 +178,10 @@ function CheckoutContent() {
 
       <Grid container spacing={4}>
         <Grid item xs={12} md={7}>
-          <Paper elevation={0} sx={{ p: 4, border: '1px solid rgba(255,255,255,0.05)' }}>
+          <Paper elevation={0} sx={{ p: 4, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
               <Typography variant="h5" fontWeight={800}>Order Summary</Typography>
-              <Chip
-                icon={<TimerIcon sx={{ fontSize: 16 }} />}
-                label="Held for 10m"
-                size="small"
-                sx={{ fontWeight: 800, background: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.main }}
-              />
+              <CheckoutTimer seats={seats} onExpire={() => setIsExpired(true)} />
             </Box>
 
             <Box sx={{ mb: 4 }}>
@@ -193,7 +234,7 @@ function CheckoutContent() {
                 fullWidth
                 variant="contained"
                 size="large"
-                disabled={confirming}
+                disabled={confirming || isExpired}
                 onClick={handleConfirm}
                 startIcon={confirming ? <CircularProgress size={20} color="inherit" /> : <PaymentIcon />}
                 sx={{ py: 2, borderRadius: 4, fontWeight: 800, fontSize: '1.1rem' }}

@@ -3,16 +3,20 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Card, CardContent, CircularProgress,
-  Divider, Paper, LinearProgress, Alert, Stack, alpha, useTheme,
-  Chip,
+  LinearProgress, Alert, Stack, alpha, useTheme,
+  Chip, Skeleton, Button,
 } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import {
-  TrendingUp as RevenueIcon, EventSeat as SeatIcon,
-  Lock as LockIcon, CheckCircle as SoldIcon,
+  TrendingUp as RevenueIcon,
+
   Percent as RateIcon, Event as EventIcon, DashboardCustomize,
+  Group as AudienceIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
+import { PieChart } from '@mui/x-charts/PieChart';
 import { useSession } from 'next-auth/react';
+import Link from 'next/link'; // Đảm bảo sử dụng Next.js Link
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
@@ -28,10 +32,21 @@ interface EventAnalytics {
   totalRevenue: number;
 }
 
+interface Demographics {
+  gender: {
+    MALE: number;
+    FEMALE: number;
+    OTHER: number;
+    UNKNOWN: number;
+  };
+  age: {
+    [key: string]: number;
+  };
+}
+
 function StatCard({ icon, label, value, color, secondary }: {
   icon: React.ReactNode; label: string; value: string | number; color: string; secondary?: string;
 }) {
-  const theme = useTheme();
   return (
     <Card sx={{
       borderRadius: 5, height: '100%',
@@ -65,26 +80,48 @@ function StatCard({ icon, label, value, color, secondary }: {
 export default function AdminDashboard() {
   const theme = useTheme();
   const [data, setData] = useState<EventAnalytics[]>([]);
+  const [demographics, setDemographics] = useState<Demographics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [demoLoading, setDemoLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
+    // Nếu session đang load thì không làm gì cả
+    if (status === 'loading') return;
+
+    // Nếu đã load xong mà không có token hoặc không phải Admin
+    if (status === 'unauthenticated' || !session?.user?.accessToken) {
+      setError('Unauthorized access. Please log in as Admin.');
+      setLoading(false);
+      setDemoLoading(false);
+      return;
+    }
+
     (async () => {
-      if (!session?.user?.accessToken) return;
       try {
-        const r = await fetch(`${API}/api/booking/admin/analytics`, {
-          headers: {
-            'Authorization': `Bearer ${session.user.accessToken}`,
-          },
-        });
-        if (!r.ok) throw new Error('Failed to load analytics');
-        setData(await r.json());
-      } catch (e: any) { setError(e.message); }
-      finally { setLoading(false); }
+        const [statsRes, demoRes] = await Promise.all([
+          fetch(`${API}/api/booking/admin/analytics`, {
+            headers: { 'Authorization': `Bearer ${session.user.accessToken}` },
+          }),
+          fetch(`${API}/api/admin/analytics/demographics`, {
+            headers: { 'Authorization': `Bearer ${session.user.accessToken}` },
+          })
+        ]);
+
+        if (!statsRes.ok || !demoRes.ok) throw new Error('Failed to load dashboard data');
+
+        setData(await statsRes.json());
+        setDemographics(await demoRes.json());
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+        setDemoLoading(false);
+      }
     })();
-  }, [session]);
+  }, [session, status]);
 
   if (loading) return (
     <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 20, alignItems: 'center', gap: 2 }}>
@@ -93,7 +130,14 @@ export default function AdminDashboard() {
     </Box>
   );
 
-  if (error) return <Alert severity="error" sx={{ m: 4, borderRadius: 3, fontWeight: 700 }}>{error}</Alert>;
+  if (error) return (
+    <Box sx={{ m: 4 }}>
+      <Alert severity="error" sx={{ borderRadius: 3, fontWeight: 700, mb: 2 }}>{error}</Alert>
+      <Link href="/login" passHref style={{ textDecoration: 'none' }}>
+        <Button variant="contained">Go to Login</Button>
+      </Link>
+    </Box>
+  );
 
   const totals = data.reduce((acc, e) => ({
     seats: acc.seats + e.totalSeats, sold: acc.sold + e.soldSeats,
@@ -101,6 +145,16 @@ export default function AdminDashboard() {
   }), { seats: 0, sold: 0, locked: 0, revenue: 0 });
 
   const overallFill = totals.seats > 0 ? ((totals.sold / totals.seats) * 100).toFixed(1) : '0.0';
+
+  const genderData = demographics ? [
+    { id: 0, value: demographics.gender.MALE, label: 'Male', color: theme.palette.primary.main },
+    { id: 1, value: demographics.gender.FEMALE, label: 'Female', color: theme.palette.secondary.main },
+    { id: 2, value: demographics.gender.OTHER, label: 'Other', color: theme.palette.warning.main },
+  ].filter(d => d.value > 0) : [];
+
+  const ageData = demographics ? Object.entries(demographics.age)
+    .map(([label, value], id) => ({ id, value, label }))
+    .filter(d => d.value > 0) : [];
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', py: 8, px: 4 }}>
@@ -114,21 +168,108 @@ export default function AdminDashboard() {
           </Typography>
           <Typography variant="body1" color="text.secondary">Real-time performance across {data.length} active events</Typography>
         </Box>
+        <Box sx={{ flexGrow: 1 }} />
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={() => window.location.reload()}
+          sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+        >
+          Refresh Data
+        </Button>
       </Stack>
 
-      {/* Global Stats */}
+      {/* Quick Actions & Global Stats */}
       <Grid container spacing={4} sx={{ mb: 8 }}>
+        <Grid xs={12} md={6}>
+          <Card sx={{ borderRadius: 5, border: '1px solid rgba(255,255,255,0.05)', background: alpha(theme.palette.primary.main, 0.03), height: '100%' }}>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant="h6" fontWeight={800} sx={{ mb: 3 }}>Quick Management</Typography>
+              <Stack direction="row" spacing={2}>
+                <Button
+                  variant="contained"
+                  component={Link}
+                  href="/admin/events/new"
+                  startIcon={<AddIcon />}
+                  sx={{ borderRadius: 3, px: 3, py: 1.5 }}
+                >
+                  New Event
+                </Button>
+                <Button
+                  variant="outlined"
+                  component={Link}
+                  href="/admin/events"
+                  startIcon={<EventIcon />}
+                  sx={{ borderRadius: 3, px: 3, py: 1.5 }}
+                >
+                  Manage Events
+                </Button>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
         <Grid xs={12} sm={6} md={3}>
           <StatCard icon={<RevenueIcon />} label="Total Revenue" value={`$${totals.revenue.toLocaleString()}`} color={theme.palette.success.main} secondary="+12.5% from last week" />
         </Grid>
         <Grid xs={12} sm={6} md={3}>
-          <StatCard icon={<SeatIcon />} label="Total Inventory" value={totals.seats} color={theme.palette.primary.main} secondary="Across all venues" />
-        </Grid>
-        <Grid xs={12} sm={6} md={3}>
-          <StatCard icon={<SoldIcon />} label="Confirmed Sales" value={totals.sold} color={theme.palette.secondary.main} secondary={`${((totals.sold / totals.seats) * 100).toFixed(1)}% of total capacity`} />
-        </Grid>
-        <Grid xs={12} sm={6} md={3}>
           <StatCard icon={<RateIcon />} label="Global Fill Rate" value={`${overallFill}%`} color={theme.palette.warning.main} secondary="Live occupancy rate" />
+        </Grid>
+      </Grid>
+
+      {/* Demographics Section */}
+      <Typography variant="h5" fontWeight={800} sx={{ mb: 4, fontFamily: '"Outfit", sans-serif', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <AudienceIcon color="primary" /> Audience Demographics
+      </Typography>
+      <Grid container spacing={4} sx={{ mb: 8 }}>
+        <Grid xs={12} md={6}>
+          <Card sx={{ borderRadius: 5, border: '1px solid rgba(255,255,255,0.05)', background: alpha('#fff', 0.01) }}>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant="h6" fontWeight={800} sx={{ mb: 4 }}>Gender Distribution</Typography>
+              {demoLoading ? (
+                <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 4 }} />
+              ) : (
+                <Box sx={{ height: 300, display: 'flex', justifyContent: 'center' }}>
+                  <PieChart
+                    series={[{
+                      data: genderData,
+                      innerRadius: 60,
+                      outerRadius: 100,
+                      paddingAngle: 5,
+                      cornerRadius: 5,
+                      highlightScope: { faded: 'global', highlighted: 'item' },
+                    }]}
+                    width={400}
+                    height={300}
+                  />
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid xs={12} md={6}>
+          <Card sx={{ borderRadius: 5, border: '1px solid rgba(255,255,255,0.05)', background: alpha('#fff', 0.01) }}>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant="h6" fontWeight={800} sx={{ mb: 4 }}>Age Brackets</Typography>
+              {demoLoading ? (
+                <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 4 }} />
+              ) : (
+                <Box sx={{ height: 300, display: 'flex', justifyContent: 'center' }}>
+                  <PieChart
+                    series={[{
+                      data: ageData,
+                      innerRadius: 60,
+                      outerRadius: 100,
+                      paddingAngle: 5,
+                      cornerRadius: 5,
+                      highlightScope: { faded: 'global', highlighted: 'item' },
+                    }]}
+                    width={400}
+                    height={300}
+                  />
+                </Box>
+              )}
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
 

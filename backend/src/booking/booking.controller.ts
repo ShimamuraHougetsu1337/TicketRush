@@ -61,10 +61,16 @@ export class BookingController {
     return this.bookingService.getAllEventsAnalytics();
   }
 
-  /** GET /api/booking/my-tickets */
   @UseGuards(JwtAuthGuard)
   @Get('my-tickets')
   getMyTickets(@CurrentUser() user: { id: number, role: string }) {
     return this.bookingService.getUserTickets(user.id);
+  }
+
+  /** GET /api/booking/my-locks */
+  @UseGuards(JwtAuthGuard)
+  @Get('my-locks')
+  getMyLocks(@CurrentUser() user: { id: number, role: string }) {
+    return this.bookingService.getUserLocks(user.id);
   }
 }

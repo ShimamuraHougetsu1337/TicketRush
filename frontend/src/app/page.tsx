@@ -18,23 +18,41 @@ import {
   alpha,
   useTheme,
 } from '@mui/material';
-import { CalendarToday, LocationOn, Bolt, ConfirmationNumber } from '@mui/icons-material';
+import {
+  CalendarToday,
+  LocationOn,
+  Bolt,
+  ConfirmationNumber,
+  SearchOff
+} from '@mui/icons-material';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export default function HomePage() {
   const { data: events, error, isLoading } = useSWR(`${API_URL}/api/events`, fetcher);
+  const { data: session } = useSession();
   const theme = useTheme();
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get('search')?.toLowerCase() || '';
+
+  // Filtering Logic
+  const filteredEvents = events?.filter((event: any) => {
+    const matchesSearch = event.title.toLowerCase().includes(searchQuery);
+    const isUpcomingOrOngoing = event.status !== 'ENDED';
+    return matchesSearch && isUpcomingOrOngoing;
+  });
 
   return (
     <Box sx={{ pb: 10 }}>
       {/* Hero Section */}
-      <Box 
-        sx={{ 
-          position: 'relative', 
-          pt: { xs: 8, md: 12 }, 
+      <Box
+        sx={{
+          position: 'relative',
+          pt: { xs: 8, md: 12 },
           pb: { xs: 10, md: 16 },
           overflow: 'hidden'
         }}
@@ -59,7 +77,7 @@ export default function HomePage() {
                 Fastest Ticket Booking Engine
               </Typography>
             </Box>
-            
+
             <Typography
               variant="h1"
               sx={{
@@ -74,56 +92,72 @@ export default function HomePage() {
               Grab Your Tickets <br />
               <Box component="span" sx={{ color: theme.palette.primary.main }}>Before They're Gone</Box>
             </Typography>
-            
+
             <Typography variant="h6" sx={{ color: 'text.secondary', maxWidth: '700px', mx: 'auto', mb: 6, fontWeight: 400 }}>
               Join thousands of fans securing seats in real-time. Our high-concurrency engine ensures a fair and lightning-fast booking experience.
             </Typography>
 
             <Stack direction="row" spacing={2} justifyContent="center">
-              <Button variant="contained" size="large" endIcon={<ConfirmationNumber />}>
+              <Button
+                variant="contained"
+                size="large"
+                endIcon={<ConfirmationNumber />}
+                onClick={() => document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' })}
+                sx={{ borderRadius: 3, px: 4 }}
+              >
                 Explore Events
               </Button>
-              <Button variant="outlined" size="large" sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'white' }}>
-                How it works
-              </Button>
+
+              {session ? (
+                <Button
+                  variant="outlined"
+                  size="large"
+                  component={Link}
+                  href={session.user.role === 'ADMIN' ? '/admin' : '/my-tickets'}
+                  sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'white', borderRadius: 3, px: 4 }}
+                >
+                  {session.user.role === 'ADMIN' ? 'Go to Admin' : 'My Tickets'}
+                </Button>
+              ) : (
+                <Button
+                  variant="outlined"
+                  size="large"
+                  component={Link}
+                  href="/register"
+                  sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'white', borderRadius: 3, px: 4 }}
+                >
+                  Join Now
+                </Button>
+              )}
             </Stack>
           </Box>
         </Container>
 
         {/* Decorative elements */}
-        <Box 
-          sx={{ 
-            position: 'absolute', 
-            top: '-20%', 
-            right: '-10%', 
-            width: '600px', 
-            height: '600px', 
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '-20%',
+            right: '-10%',
+            width: '600px',
+            height: '600px',
             background: 'radial-gradient(circle, rgba(79, 172, 254, 0.15) 0%, transparent 70%)',
             zIndex: 0,
             filter: 'blur(60px)'
-          }} 
-        />
-        <Box 
-          sx={{ 
-            position: 'absolute', 
-            bottom: '10%', 
-            left: '-5%', 
-            width: '400px', 
-            height: '400px', 
-            background: 'radial-gradient(circle, rgba(240, 147, 251, 0.1) 0%, transparent 70%)',
-            zIndex: 0,
-            filter: 'blur(50px)'
-          }} 
+          }}
         />
       </Box>
 
-      <Container maxWidth="lg">
+      <Container maxWidth="lg" id="events-section">
         <Box sx={{ mb: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <Box>
-            <Typography variant="h3" sx={{ mb: 1, fontFamily: '"Outfit", sans-serif' }}>Upcoming Events</Typography>
-            <Typography variant="body1" color="text.secondary">Handpicked experiences just for you</Typography>
+            <Typography variant="h3" sx={{ mb: 1, fontFamily: '"Outfit", sans-serif' }}>
+              {searchQuery ? `Search Results for "${searchQuery}"` : 'Upcoming Events'}
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              {searchQuery ? `${filteredEvents?.length || 0} events found` : 'Handpicked experiences just for you'}
+            </Typography>
           </Box>
-          <Button variant="text" sx={{ color: theme.palette.primary.main }}>View All</Button>
         </Box>
 
         {isLoading && (
@@ -139,8 +173,37 @@ export default function HomePage() {
           </Box>
         )}
 
+        {/* Empty State */}
+        {!isLoading && filteredEvents?.length === 0 && (
+          <Box sx={{
+            textAlign: 'center',
+            py: 12,
+            px: 2,
+            background: alpha(theme.palette.common.white, 0.02),
+            borderRadius: 8,
+            border: `1px dashed ${alpha(theme.palette.common.white, 0.1)}`
+          }}>
+            <SearchOff sx={{ fontSize: 80, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
+            <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>No events found</Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+              We couldn't find any events matching "{searchQuery}". Try a different keyword.
+            </Typography>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                const params = new URLSearchParams(window.location.search);
+                params.delete('search');
+                window.location.href = `/?${params.toString()}`;
+              }}
+              sx={{ borderRadius: 3 }}
+            >
+              Clear Search
+            </Button>
+          </Box>
+        )}
+
         <Grid container spacing={4}>
-          {events?.filter((e: any) => e.status !== 'ENDED').map((event: any) => (
+          {filteredEvents?.map((event: any) => (
             <Grid item xs={12} sm={6} md={4} key={event.id}>
               <Card
                 sx={{
@@ -150,7 +213,7 @@ export default function HomePage() {
                   position: 'relative',
                   overflow: 'hidden',
                   transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                  '&:hover': { 
+                  '&:hover': {
                     transform: 'translateY(-10px)',
                     borderColor: alpha(theme.palette.primary.main, 0.3),
                     boxShadow: `0 20px 40px ${alpha('#000', 0.4)}`,
@@ -159,9 +222,9 @@ export default function HomePage() {
                 }}
               >
                 {/* Simulated Image Header */}
-                <Box 
-                  sx={{ 
-                    height: '200px', 
+                <Box
+                  sx={{
+                    height: '200px',
                     background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.2)}, ${alpha(theme.palette.secondary.main, 0.2)})`,
                     position: 'relative',
                     display: 'flex',
@@ -169,13 +232,13 @@ export default function HomePage() {
                     justifyContent: 'center'
                   }}
                 >
-                   <Box 
+                  <Box
                     className="card-image-overlay"
-                    sx={{ 
-                      position: 'absolute', 
-                      inset: 0, 
-                      background: 'rgba(0,0,0,0.4)', 
-                      opacity: 0, 
+                    sx={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'rgba(0,0,0,0.4)',
+                      opacity: 0,
                       transition: 'opacity 0.3s',
                       display: 'flex',
                       alignItems: 'center',
@@ -190,10 +253,10 @@ export default function HomePage() {
                   <Chip
                     label={event.status}
                     size="small"
-                    sx={{ 
-                      position: 'absolute', 
-                      top: 16, 
-                      right: 16, 
+                    sx={{
+                      position: 'absolute',
+                      top: 16,
+                      right: 16,
                       fontWeight: 800,
                       fontSize: '0.65rem',
                       background: event.status === 'ONGOING' ? 'linear-gradient(90deg, #00b09b, #96c93d)' : alpha('#fff', 0.1),
@@ -208,7 +271,7 @@ export default function HomePage() {
                   <Typography variant="h5" sx={{ mb: 2, fontFamily: '"Outfit", sans-serif', fontWeight: 700 }}>
                     {event.title}
                   </Typography>
-                  
+
                   <Stack spacing={1.5}>
                     <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
                       <CalendarToday sx={{ fontSize: 18, mr: 1.5, color: theme.palette.primary.main }} />
@@ -224,15 +287,15 @@ export default function HomePage() {
                 </CardContent>
 
                 <CardActions sx={{ p: 3, pt: 0 }}>
-                  <Link href={`/events/${event.id}`} passHref style={{ width: '100%', textDecoration: 'none' }}>
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      sx={{ py: 1.5 }}
-                    >
-                      Book Your Seat
-                    </Button>
-                  </Link>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    component={Link}
+                    href={`/events/${event.id}`}
+                    sx={{ py: 1.5 }}
+                  >
+                    Book Your Seat
+                  </Button>
                 </CardActions>
               </Card>
             </Grid>

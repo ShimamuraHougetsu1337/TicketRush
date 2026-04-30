@@ -346,4 +346,18 @@ export class BookingService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  async getUserLocks(userId: number) {
+    return this.prisma.seat.findMany({
+      where: { 
+        status: SeatStatus.LOCKED,
+        lockedById: userId
+      },
+      include: {
+        event: true,
+        zone: true
+      },
+      orderBy: { lockedAt: 'asc' }
+    });
+  }
 }
