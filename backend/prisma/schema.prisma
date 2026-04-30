@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum EventStatus {
+  UPCOMING
+  ONGOING
+  ENDED
+}
+
+enum SeatStatus {
+  AVAILABLE
+  LOCKED
+  SOLD
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  role        Role     @default(CUSTOMER)
+  fullName    String   @map("full_name") @db.VarChar(255)
+  email       String   @unique @db.VarChar(255)
+  password    String   @db.VarChar(255)
+  age         Int?
+  gender      String?  @db.VarChar(10)
+  orders      Order[]
+  lockedSeats Seat[]   @relation("LockedSeats")
+
+  @@map("users")
+}
+
+model Event {
+  id         Int         @id @default(autoincrement())
+  title      String      @db.VarChar(255)
+  startTime  DateTime    @map("start_time")
+  status     EventStatus @default(UPCOMING)
+  zones      Zone[]
+  orders     Order[]
+  seats      Seat[]
+
+  @@map("events")
+}
+
+model Zone {
+  id            Int     @id @default(autoincrement())
+  eventId       Int     @map("event_id")
+  name          String  @db.VarChar(50)
+  price         Decimal @db.Decimal(10, 2)
+  totalRows     Int     @map("total_rows")
+  seatsPerRow   Int     @map("seats_per_row")
+  
+  event         Event   @relation(fields: [eventId], references: [id])
+  seats         Seat[]
+
+  @@map("zones")
+}
+
+model Order {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  eventId     Int      @map("event_id")
+  totalAmount Decimal  @map("total_amount") @db.Decimal(10, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  user        User     @relation(fields: [userId], references: [id])
+  event       Event    @relation(fields: [eventId], references: [id])
+  seats       Seat[]
+
+  @@map("orders")
+}
+
+model Seat {
+  id          Int        @id @default(autoincrement())
+  eventId     Int        @map("event_id")
+  zoneId      Int        @map("zone_id")
+  rowName     String     @map("row_name") @db.VarChar(10)
+  seatNumber  Int        @map("seat_number")
+  status      SeatStatus @default(AVAILABLE)
+  
+  orderId     Int?       @map("order_id")
+  lockedById  Int?       @map("locked_by")
+  lockedAt    DateTime?  @map("locked_at")
+  ticketCode  String?    @unique @map("ticket_code") @db.VarChar(255)
+
+  event       Event      @relation(fields: [eventId], references: [id])
+  zone        Zone       @relation(fields: [zoneId], references: [id])
+  order       Order?     @relation(fields: [orderId], references: [id])
+  lockedBy    User?      @relation("LockedSeats", fields: [lockedById], references: [id])
+
+  @@unique([eventId, zoneId, rowName, seatNumber])
+  @@index([eventId, status])
+  @@index([lockedAt])
+  @@map("seats")
+}

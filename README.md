@@ -184,7 +184,3 @@ Hệ thống sử dụng **Pessimistic Locking (`SELECT ... FOR UPDATE`)** để
 
 ---
 
-## 📝 License
-
-MIT © TicketRush
-"# TicketRush" 
