@@ -1,207 +1,101 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  Box, Typography, Card, CardContent, CircularProgress,
-  LinearProgress, Alert, Stack, alpha, useTheme,
-  Chip, Skeleton, Button,
+  Box, Typography, Card, CardContent, Stack, alpha, useTheme, Chip, LinearProgress, Button,
+  IconButton, Snackbar, Alert
 } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import {
   TrendingUp as RevenueIcon,
-
-  Percent as RateIcon, Event as EventIcon, DashboardCustomize,
+  Percent as RateIcon,
+  Event as EventIcon,
   Group as AudienceIcon,
   Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  BarChart as StatsIcon,
 } from '@mui/icons-material';
-import { PieChart } from '@mui/x-charts/PieChart';
-import { useSession } from 'next-auth/react';
-import Link from 'next/link'; // Đảm bảo sử dụng Next.js Link
+import Link from 'next/link';
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+import DashboardHeader from './admin/DashboardHeader';
+import StatCard from './admin/StatCard';
+import DemographicsCharts from './admin/DemographicsCharts';
+import EditEventModal from './admin/EditEventModal';
+import DeleteConfirmDialog from './admin/DeleteConfirmDialog';
+import { mutate } from 'swr';
 
-interface EventAnalytics {
-  id: number;
-  title: string;
-  status: string;
-  totalSeats: number;
-  soldSeats: number;
-  lockedSeats: number;
-  availableSeats: number;
-  fillRate: string;
-  totalRevenue: number;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+interface AdminDashboardProps {
+  initialData: any;
+  accessToken: string;
 }
 
-interface Demographics {
-  gender: {
-    MALE: number;
-    FEMALE: number;
-    OTHER: number;
-    UNKNOWN: number;
-  };
-  age: {
-    [key: string]: number;
-  };
-}
-
-function StatCard({ icon, label, value, color, secondary }: {
-  icon: React.ReactNode; label: string; value: string | number; color: string; secondary?: string;
-}) {
-  return (
-    <Card sx={{
-      borderRadius: 5, height: '100%',
-      background: alpha(color, 0.05),
-      border: `1px solid ${alpha(color, 0.1)}`,
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      position: 'relative',
-      overflow: 'hidden',
-      '&:hover': { transform: 'translateY(-6px)', background: alpha(color, 0.08), borderColor: alpha(color, 0.3) }
-    }}>
-      <Box sx={{
-        position: 'absolute', top: -20, right: -20, width: 100, height: 100,
-        background: `radial-gradient(circle, ${alpha(color, 0.15)} 0%, transparent 70%)`,
-        filter: 'blur(20px)', zIndex: 0
-      }} />
-      <CardContent sx={{ position: 'relative', zIndex: 1, p: 3 }}>
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-          <Box sx={{
-            p: 1.5, borderRadius: 3, background: alpha(color, 0.1), color,
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>{icon}</Box>
-          <Typography variant="body2" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</Typography>
-        </Stack>
-        <Typography variant="h3" fontWeight={900} sx={{ color: 'white', mb: 0.5 }}>{value}</Typography>
-        {secondary && <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), fontWeight: 600 }}>{secondary}</Typography>}
-      </CardContent>
-    </Card>
-  );
-}
-
-export default function AdminDashboard() {
+export default function AdminDashboard({ initialData, accessToken }: AdminDashboardProps) {
   const theme = useTheme();
-  const [data, setData] = useState<EventAnalytics[]>([]);
-  const [demographics, setDemographics] = useState<Demographics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [demoLoading, setDemoLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState(initialData?.stats || []);
+  const [demographics] = useState(initialData?.demographics || null);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [deletingEvent, setDeletingEvent] = useState<any>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const { data: session, status } = useSession();
+  const handleEditSuccess = () => {
+    setSuccessMsg('Event updated successfully!');
+    setEditingEvent(null);
+  };
 
-  useEffect(() => {
-    // Nếu session đang load thì không làm gì cả
-    if (status === 'loading') return;
-
-    // Nếu đã load xong mà không có token hoặc không phải Admin
-    if (status === 'unauthenticated' || !session?.user?.accessToken) {
-      setError('Unauthorized access. Please log in as Admin.');
-      setLoading(false);
-      setDemoLoading(false);
-      return;
+  const handleDelete = async () => {
+    if (!deletingEvent) return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/events/${deletingEvent.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      if (!res.ok) throw new Error('Failed to delete event');
+      setData(data.filter((e: any) => e.id !== deletingEvent.id));
+      mutate(`${API_URL}/api/events`);
+      setSuccessMsg('Event deleted successfully!');
+      setDeletingEvent(null);
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    } finally {
+      setDeleteLoading(false);
     }
+  };
 
-    (async () => {
-      try {
-        const [statsRes, demoRes] = await Promise.all([
-          fetch(`${API}/api/booking/admin/analytics`, {
-            headers: { 'Authorization': `Bearer ${session.user.accessToken}` },
-          }),
-          fetch(`${API}/api/admin/analytics/demographics`, {
-            headers: { 'Authorization': `Bearer ${session.user.accessToken}` },
-          })
-        ]);
+  const handleEditClick = (ev: any) => {
+    setEditingEvent({
+      ...ev,
+      startTime: new Date(ev.startTime).toISOString().slice(0, 16)
+    });
+  };
 
-        if (!statsRes.ok || !demoRes.ok) throw new Error('Failed to load dashboard data');
-
-        setData(await statsRes.json());
-        setDemographics(await demoRes.json());
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-        setDemoLoading(false);
-      }
-    })();
-  }, [session, status]);
-
-  if (loading) return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', py: 20, alignItems: 'center', gap: 2 }}>
-      <CircularProgress size={60} thickness={5} />
-      <Typography color="text.secondary" fontWeight={600}>Loading Dashboard...</Typography>
-    </Box>
-  );
-
-  if (error) return (
-    <Box sx={{ m: 4 }}>
-      <Alert severity="error" sx={{ borderRadius: 3, fontWeight: 700, mb: 2 }}>{error}</Alert>
-      <Link href="/login" passHref style={{ textDecoration: 'none' }}>
-        <Button variant="contained">Go to Login</Button>
-      </Link>
-    </Box>
-  );
-
-  const totals = data.reduce((acc, e) => ({
-    seats: acc.seats + e.totalSeats, sold: acc.sold + e.soldSeats,
-    locked: acc.locked + e.lockedSeats, revenue: acc.revenue + Number(e.totalRevenue),
+  const totals = data.reduce((acc: any, e: any) => ({
+    seats: acc.seats + e.totalSeats,
+    sold: acc.sold + e.soldSeats,
+    locked: acc.locked + e.lockedSeats,
+    revenue: acc.revenue + Number(e.totalRevenue),
   }), { seats: 0, sold: 0, locked: 0, revenue: 0 });
 
   const overallFill = totals.seats > 0 ? ((totals.sold / totals.seats) * 100).toFixed(1) : '0.0';
 
-  const genderData = demographics ? [
-    { id: 0, value: demographics.gender.MALE, label: 'Male', color: theme.palette.primary.main },
-    { id: 1, value: demographics.gender.FEMALE, label: 'Female', color: theme.palette.secondary.main },
-    { id: 2, value: demographics.gender.OTHER, label: 'Other', color: theme.palette.warning.main },
-  ].filter(d => d.value > 0) : [];
-
-  const ageData = demographics ? Object.entries(demographics.age)
-    .map(([label, value], id) => ({ id, value, label }))
-    .filter(d => d.value > 0) : [];
-
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', py: 8, px: 4 }}>
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 6 }}>
-        <Box sx={{ p: 1.5, borderRadius: 2, background: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main }}>
-          <DashboardCustomize />
-        </Box>
-        <Box>
-          <Typography variant="h3" fontWeight={900} sx={{ fontFamily: '"Outfit", sans-serif' }}>
-            System Overview
-          </Typography>
-          <Typography variant="body1" color="text.secondary">Real-time performance across {data.length} active events</Typography>
-        </Box>
-        <Box sx={{ flexGrow: 1 }} />
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={() => window.location.reload()}
-          sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
-        >
-          Refresh Data
-        </Button>
-      </Stack>
+      <DashboardHeader eventCount={data.length} />
 
-      {/* Quick Actions & Global Stats */}
       <Grid container spacing={4} sx={{ mb: 8 }}>
         <Grid xs={12} md={6}>
-          <Card sx={{ borderRadius: 5, border: '1px solid rgba(255,255,255,0.05)', background: alpha(theme.palette.primary.main, 0.03), height: '100%' }}>
+          <Card sx={{ borderRadius: 2, border: '1px solid rgba(255,255,255,0.05)', background: alpha(theme.palette.primary.main, 0.03), height: '100%' }}>
             <CardContent sx={{ p: 4 }}>
               <Typography variant="h6" fontWeight={800} sx={{ mb: 3 }}>Quick Management</Typography>
               <Stack direction="row" spacing={2}>
-                <Button
-                  variant="contained"
-                  component={Link}
-                  href="/admin/events/new"
-                  startIcon={<AddIcon />}
-                  sx={{ borderRadius: 3, px: 3, py: 1.5 }}
-                >
+                <Button variant="contained" component={Link} href="/admin/events/new" startIcon={<AddIcon />} sx={{ borderRadius: 3, px: 3, py: 1.5 }}>
                   New Event
                 </Button>
-                <Button
-                  variant="outlined"
-                  component={Link}
-                  href="/admin/events"
-                  startIcon={<EventIcon />}
-                  sx={{ borderRadius: 3, px: 3, py: 1.5 }}
-                >
+                <Button variant="outlined" component={Link} href="/admin/events" startIcon={<EventIcon />} sx={{ borderRadius: 3, px: 3, py: 1.5 }}>
                   Manage Events
                 </Button>
               </Stack>
@@ -209,74 +103,22 @@ export default function AdminDashboard() {
           </Card>
         </Grid>
         <Grid xs={12} sm={6} md={3}>
-          <StatCard icon={<RevenueIcon />} label="Total Revenue" value={`$${totals.revenue.toLocaleString()}`} color={theme.palette.success.main} secondary="+12.5% from last week" />
+          <StatCard icon={<RevenueIcon />} label="Total Revenue" value={`$${totals.revenue.toLocaleString()}`} color={theme.palette.success.main} />
         </Grid>
         <Grid xs={12} sm={6} md={3}>
-          <StatCard icon={<RateIcon />} label="Global Fill Rate" value={`${overallFill}%`} color={theme.palette.warning.main} secondary="Live occupancy rate" />
+          <StatCard icon={<RateIcon />} label="Global Fill Rate" value={`${overallFill}%`} color={theme.palette.warning.main} />
         </Grid>
       </Grid>
 
-      {/* Demographics Section */}
       <Typography variant="h5" fontWeight={800} sx={{ mb: 4, fontFamily: '"Outfit", sans-serif', display: 'flex', alignItems: 'center', gap: 1.5 }}>
         <AudienceIcon color="primary" /> Audience Demographics
       </Typography>
-      <Grid container spacing={4} sx={{ mb: 8 }}>
-        <Grid xs={12} md={6}>
-          <Card sx={{ borderRadius: 5, border: '1px solid rgba(255,255,255,0.05)', background: alpha('#fff', 0.01) }}>
-            <CardContent sx={{ p: 4 }}>
-              <Typography variant="h6" fontWeight={800} sx={{ mb: 4 }}>Gender Distribution</Typography>
-              {demoLoading ? (
-                <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 4 }} />
-              ) : (
-                <Box sx={{ height: 300, display: 'flex', justifyContent: 'center' }}>
-                  <PieChart
-                    series={[{
-                      data: genderData,
-                      innerRadius: 60,
-                      outerRadius: 100,
-                      paddingAngle: 5,
-                      cornerRadius: 5,
-                      highlightScope: { faded: 'global', highlighted: 'item' },
-                    }]}
-                    width={400}
-                    height={300}
-                  />
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid xs={12} md={6}>
-          <Card sx={{ borderRadius: 5, border: '1px solid rgba(255,255,255,0.05)', background: alpha('#fff', 0.01) }}>
-            <CardContent sx={{ p: 4 }}>
-              <Typography variant="h6" fontWeight={800} sx={{ mb: 4 }}>Age Brackets</Typography>
-              {demoLoading ? (
-                <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 4 }} />
-              ) : (
-                <Box sx={{ height: 300, display: 'flex', justifyContent: 'center' }}>
-                  <PieChart
-                    series={[{
-                      data: ageData,
-                      innerRadius: 60,
-                      outerRadius: 100,
-                      paddingAngle: 5,
-                      cornerRadius: 5,
-                      highlightScope: { faded: 'global', highlighted: 'item' },
-                    }]}
-                    width={400}
-                    height={300}
-                  />
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
 
-      {/* Per-Event Breakdown */}
+      <DemographicsCharts demographics={demographics} loading={false} />
+
       <Typography variant="h5" fontWeight={800} sx={{ mb: 4, fontFamily: '"Outfit", sans-serif' }}>Live Events Performance</Typography>
       <Grid container spacing={4}>
-        {data.map((ev) => (
+        {data.map((ev: any) => (
           <Grid key={ev.id} xs={12} lg={6}>
             <Card sx={{
               borderRadius: 5, border: '1px solid rgba(255,255,255,0.05)',
@@ -292,16 +134,27 @@ export default function AdminDashboard() {
                     </Box>
                     <Typography variant="h6" fontWeight={800}>{ev.title}</Typography>
                   </Box>
-                  <Chip
-                    label={ev.status}
-                    size="small"
-                    sx={{
-                      fontWeight: 800, fontSize: '0.65rem',
-                      background: ev.status === 'ONGOING' ? alpha(theme.palette.success.main, 0.1) : 'rgba(255,255,255,0.05)',
-                      color: ev.status === 'ONGOING' ? theme.palette.success.main : 'text.secondary',
-                      border: 'none'
-                    }}
-                  />
+                  <Stack direction="row" spacing={1}>
+                    <Chip
+                      label={ev.status}
+                      size="small"
+                      sx={{
+                        fontWeight: 800, fontSize: '0.65rem',
+                        background: ev.status === 'ONGOING' ? alpha(theme.palette.success.main, 0.1) : 'rgba(255,255,255,0.05)',
+                        color: ev.status === 'ONGOING' ? theme.palette.success.main : 'text.secondary',
+                        border: 'none'
+                      }}
+                    />
+                    <IconButton size="small" component={Link} href={`/admin/events/${ev.id}/stats`} sx={{ color: 'secondary.main' }}>
+                      <StatsIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleEditClick(ev)} sx={{ color: 'primary.main' }}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => setDeletingEvent(ev)} sx={{ color: 'error.main' }}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
                 </Box>
 
                 <Box sx={{ mb: 4 }}>
@@ -352,6 +205,35 @@ export default function AdminDashboard() {
           </Grid>
         ))}
       </Grid>
+
+      {editingEvent && (
+        <EditEventModal
+          open={!!editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onSuccess={handleEditSuccess}
+          event={editingEvent}
+          accessToken={accessToken}
+        />
+      )}
+
+      <DeleteConfirmDialog
+        open={!!deletingEvent}
+        onClose={() => setDeletingEvent(null)}
+        onConfirm={handleDelete}
+        title={deletingEvent?.title || ''}
+        loading={deleteLoading}
+      />
+
+      <Snackbar 
+        open={!!successMsg} 
+        autoHideDuration={4000} 
+        onClose={() => setSuccessMsg(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert severity="success" variant="filled" sx={{ width: '100%', borderRadius: 2, fontWeight: 700 }}>
+          {successMsg}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

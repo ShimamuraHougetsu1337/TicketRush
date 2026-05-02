@@ -8,6 +8,7 @@ import {
   Delete,
   ParseIntPipe,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto, UpdateEventDto } from './dto/event.dto';
@@ -22,8 +23,8 @@ export class EventsController {
 
   // --- Public Routes ---
   @Get()
-  findAll() {
-    return this.eventsService.getAllEvents();
+  findAll(@Query('search') search?: string) {
+    return this.eventsService.getAllEvents(search);
   }
 
   @Get(':id')

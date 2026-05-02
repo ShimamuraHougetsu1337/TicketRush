@@ -18,7 +18,6 @@ import useSWR from 'swr';
 import { fetcher } from '@/lib/fetcher';
 import { TimerOutlined, ShoppingCartOutlined, ArrowForwardIos } from '@mui/icons-material';
 
-// Styled Search Input Component
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
   borderRadius: '12px',
@@ -80,26 +79,23 @@ export default function TopNav(props: Props) {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-  
-  // Fetch global user locks
+
   const { data: myLocks } = useSWR(
     session?.user?.accessToken ? `${API_URL}/api/booking/my-locks` : null,
     (url: string) => fetch(url, {
       headers: { 'Authorization': `Bearer ${session?.user?.accessToken}` }
     }).then(res => res.json()),
-    { refreshInterval: 30000 } // Refresh every 30s
+    { refreshInterval: 30000 } 
   );
 
   const hasLocks = Array.isArray(myLocks) && myLocks.length > 0;
 
-  // Khôi phục biến trigger để xử lý hiệu ứng cuộn của AppBar
   const trigger = useScrollTrigger({
     disableHysteresis: true,
     threshold: 20,
     target: window ? window() : undefined,
   });
 
-  // Logic tìm kiếm: Chỉ thực hiện khi nhấn Enter
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       const params = new URLSearchParams(searchParams.toString());
@@ -108,12 +104,11 @@ export default function TopNav(props: Props) {
       } else {
         params.delete('search');
       }
-      // Điều hướng về trang chủ với query search mới
+      
       router.push(`/?${params.toString()}`, { scroll: false });
     }
   };
 
-  // Đồng bộ ô search khi URL thay đổi từ bên ngoài (ví dụ nhấn nút Clear Search ở trang chủ)
   useEffect(() => {
     const currentSearch = searchParams.get('search') || '';
     setSearchQuery(currentSearch);
@@ -168,7 +163,6 @@ export default function TopNav(props: Props) {
             </Box>
           </Link>
 
-          {/* Global Search Bar */}
           <Search>
             <SearchIconWrapper>
               <SearchIcon fontSize="small" />
@@ -178,7 +172,7 @@ export default function TopNav(props: Props) {
               inputProps={{ 'aria-label': 'search' }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearchKeyDown} // Sử dụng hàm xử lý phím Enter
+              onKeyDown={handleSearchKeyDown} 
             />
           </Search>
         </Box>

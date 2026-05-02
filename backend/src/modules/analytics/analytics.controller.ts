@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Param } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -13,5 +13,10 @@ export class AnalyticsController {
   @Get('demographics')
   getDemographics() {
     return this.analyticsService.getDemographics();
+  }
+
+  @Get('event/:id')
+  getEventStats(@Param('id') id: string) {
+    return this.analyticsService.getDetailedEventStats(Number(id));
   }
 }

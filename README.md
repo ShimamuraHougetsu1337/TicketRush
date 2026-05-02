@@ -79,8 +79,8 @@ npm run dev
 ### Tài khoản Demo
 | Vai trò | Email | Mật khẩu |
 |---|---|---|
-| **Quản trị viên** | `admin@ticketrush.io` | `Password123` |
-| **Khách hàng** | `user@ticketrush.io` | `Password123` |
+| **Quản trị viên** | `admin@gmail.com` | `123456` |
+| **Khách hàng** | `user@gmail.com` | `123456` |
 
 ---
 

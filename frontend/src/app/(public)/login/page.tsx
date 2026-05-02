@@ -44,7 +44,7 @@ export default function LoginPage() {
     } else {
       router.push('/');
       router.refresh();
-      // Giữ loading cho đến khi chuyển trang
+      
     }
   };
 

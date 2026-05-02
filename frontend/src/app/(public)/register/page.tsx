@@ -57,7 +57,7 @@ export default function RegisterPage() {
       }
 
       router.push('/login');
-      // Giữ loading cho đến khi chuyển trang
+      
     } catch (err: any) {
       setError(err.message);
       setLoading(false);

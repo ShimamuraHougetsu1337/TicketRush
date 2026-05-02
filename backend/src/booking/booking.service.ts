@@ -22,7 +22,7 @@ export class BookingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly seatsGateway: SeatsGateway,
-  ) {}
+  ) { }
 
   /* ================================================================
      1.  LOCK SEATS  (AVAILABLE ➜ LOCKED)
@@ -41,7 +41,6 @@ export class BookingService {
       );
     }
 
-    // Deduplicate
     const uniqueIds = [...new Set(seatIds)];
     const placeholders = uniqueIds.map(() => '?').join(',');
 
@@ -308,7 +307,7 @@ export class BookingService {
       soldSeats,
       lockedSeats,
       availableSeats: totalSeats - soldSeats - lockedSeats,
-      fillRate: totalSeats > 0 ? ((soldSeats / totalSeats) * 100).toFixed(1) : '0.0',
+      fillRate: totalSeats > 0 ? ((soldSeats / totalSeats) * 100).toFixed(2) : '0.0',
       totalRevenue: revenue._sum.totalAmount ?? 0,
     };
   }
@@ -349,7 +348,7 @@ export class BookingService {
 
   async getUserLocks(userId: number) {
     return this.prisma.seat.findMany({
-      where: { 
+      where: {
         status: SeatStatus.LOCKED,
         lockedById: userId
       },

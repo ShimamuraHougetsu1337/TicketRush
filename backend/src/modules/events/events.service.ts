@@ -26,6 +26,9 @@ export class EventsService {
       const event = await tx.event.create({
         data: {
           title: eventData.title,
+          description: eventData.description,
+          location: eventData.location,
+          bannerUrl: eventData.bannerUrl,
           startTime: new Date(eventData.startTime),
           status: eventData.status || EventStatus.UPCOMING,
         },
@@ -69,8 +72,15 @@ export class EventsService {
     });
   }
 
-  async getAllEvents() {
+  async getAllEvents(search?: string) {
     return this.prisma.event.findMany({
+      where: search ? {
+        OR: [
+          { title: { contains: search } },
+          { description: { contains: search } },
+          { location: { contains: search } },
+        ],
+      } : undefined,
       orderBy: { startTime: 'asc' },
     });
   }

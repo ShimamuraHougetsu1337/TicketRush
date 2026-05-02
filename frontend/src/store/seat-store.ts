@@ -1,11 +1,5 @@
 import { create } from 'zustand';
 
-/* ──────────────────────────────────────────────────────────────
-   Seat Selection Store  (Zustand)
-   Manages client-side seat selection state before checkout.
-   Keeps a map of selected seatIds and exposes toggle/clear ops.
-   ────────────────────────────────────────────────────────────── */
-
 export type SeatStatus = 'AVAILABLE' | 'LOCKED' | 'SOLD';
 
 export interface SeatData {
@@ -28,24 +22,21 @@ export interface SeatData {
 }
 
 interface SeatStore {
-  /* ---- Server-side seat data ---- */
+  
   seats: SeatData[];
   setSeats: (seats: SeatData[]) => void;
   updateSeats: (updates: Partial<SeatData>[]) => void;
 
-  /* ---- Client selection (pre-checkout) ---- */
   selectedIds: Set<number>;
   toggleSeat: (seatId: number) => void;
   clearSelection: () => void;
   isSeatSelected: (seatId: number) => boolean;
 
-  /* ---- Loading / error ---- */
   loading: boolean;
   setLoading: (v: boolean) => void;
   error: string | null;
   setError: (msg: string | null) => void;
 
-  /* ---- Current user id (from auth) ---- */
   currentUserId: number | null;
   setCurrentUserId: (id: number | null) => void;
 }
@@ -73,7 +64,9 @@ export const useSeatStore = create<SeatStore>((set, get) => ({
       if (next.has(seatId)) {
         next.delete(seatId);
       } else {
-        if (next.size >= 4) return state; // max 4
+        if (next.size >= 4) {
+          return { error: 'You can only select a maximum of 4 seats per booking.' };
+        }
         next.add(seatId);
       }
       return { selectedIds: next };

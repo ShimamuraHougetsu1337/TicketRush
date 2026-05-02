@@ -39,13 +39,16 @@ model User {
 }
 
 model Event {
-  id         Int         @id @default(autoincrement())
-  title      String      @db.VarChar(255)
-  startTime  DateTime    @map("start_time")
-  status     EventStatus @default(UPCOMING)
-  zones      Zone[]
-  orders     Order[]
-  seats      Seat[]
+  id          Int         @id @default(autoincrement())
+  title       String      @db.VarChar(255)
+  description String?     @db.Text
+  location    String?     @db.VarChar(255)
+  bannerUrl   String?     @map("banner_url") @db.VarChar(255)
+  startTime   DateTime    @map("start_time")
+  status      EventStatus @default(UPCOMING)
+  zones       Zone[]
+  orders      Order[]
+  seats       Seat[]
 
   @@map("events")
 }
