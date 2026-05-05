@@ -15,6 +15,8 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   BarChart as StatsIcon,
+  ShoppingBag as OrderIcon,
+  ConfirmationNumber as TicketIcon,
 } from '@mui/icons-material';
 import Link from 'next/link';
 
@@ -91,12 +93,18 @@ export default function AdminDashboard({ initialData, accessToken }: AdminDashbo
           <Card sx={{ borderRadius: 2, border: '1px solid rgba(255,255,255,0.05)', background: alpha(theme.palette.primary.main, 0.03), height: '100%' }}>
             <CardContent sx={{ p: 4 }}>
               <Typography variant="h6" fontWeight={800} sx={{ mb: 3 }}>Quick Management</Typography>
-              <Stack direction="row" spacing={2}>
+              <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ gap: 2 }}>
                 <Button variant="contained" component={Link} href="/admin/events/new" startIcon={<AddIcon />} sx={{ borderRadius: 3, px: 3, py: 1.5 }}>
                   New Event
                 </Button>
                 <Button variant="outlined" component={Link} href="/admin/events" startIcon={<EventIcon />} sx={{ borderRadius: 3, px: 3, py: 1.5 }}>
                   Manage Events
+                </Button>
+                <Button variant="outlined" color="success" component={Link} href="/admin/orders" startIcon={<OrderIcon />} sx={{ borderRadius: 3, px: 3, py: 1.5 }}>
+                  View Orders
+                </Button>
+                <Button variant="outlined" color="secondary" component={Link} href="/admin/tickets" startIcon={<TicketIcon />} sx={{ borderRadius: 3, px: 3, py: 1.5 }}>
+                  All Tickets
                 </Button>
               </Stack>
             </CardContent>

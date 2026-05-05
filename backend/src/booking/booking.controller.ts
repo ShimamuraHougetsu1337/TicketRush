@@ -73,4 +73,20 @@ export class BookingController {
   getMyLocks(@CurrentUser() user: { id: number, role: string }) {
     return this.bookingService.getUserLocks(user.id);
   }
+
+  /** GET /api/booking/admin/orders */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('admin/orders')
+  getAllOrders() {
+    return this.bookingService.getAllOrders();
+  }
+
+  /** GET /api/booking/admin/tickets */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('admin/tickets')
+  getSoldTickets() {
+    return this.bookingService.getSoldTickets();
+  }
 }

@@ -58,11 +58,11 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: { 
-          backgroundColor: 'rgba(17, 24, 39, 0.6)',
-          backdropFilter: 'blur(16px)',
+          backgroundColor: '#111827', // Use solid color for general cards
           border: '1px solid rgba(255, 255, 255, 0.05)',
           borderRadius: 24,
           boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+          backgroundImage: 'none', // Remove default MUI paper gradient
         },
       },
     },

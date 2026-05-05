@@ -53,6 +53,32 @@ const STATUS_CONFIG = (theme: any) => ({
   },
 });
 
+// Memoized Row component to prevent re-rendering entire map when one seat changes
+const SeatRow = React.memo(({ rowName, seats, currentUserId }: { rowName: string; seats: SeatData[]; currentUserId: number | null }) => {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', marginBottom: '8px', justifyContent: 'center' }}>
+      <Typography sx={{ width: 30, fontWeight: 800, color: 'text.secondary', fontSize: '0.8rem', textAlign: 'right', mr: 1 }}>
+        {rowName}
+      </Typography>
+      <div style={{ display: 'flex', flexDirection: 'row', gap: '4px' }}>
+        {seats.map(seat => (
+          <SeatButton
+            key={seat.id}
+            seat={{
+              id: seat.id,
+              status: seat.status,
+              seatNumber: seat.seatNumber,
+              lockedById: seat.lockedById
+            }}
+            currentUserId={currentUserId}
+          />
+        ))}
+      </div>
+    </div>
+  );
+});
+SeatRow.displayName = 'SeatRow';
+
 export default function SeatMap({ eventId }: { eventId: number }) {
   const theme = useTheme();
   const socketRef = useRef<Socket | null>(null);
@@ -148,7 +174,7 @@ export default function SeatMap({ eventId }: { eventId: number }) {
       </Box>
 
       {Array.from(zoneMap.entries()).map(([zid, { zoneName, price, rows }]) => (
-        <Card key={zid} sx={{ mb: 6, p: 0, overflow: 'hidden' }}>
+        <Card key={zid} sx={{ mb: 6, p: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', background: alpha(theme.palette.background.paper, 0.5) }}>
           <Box sx={{
             p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)'
@@ -160,27 +186,12 @@ export default function SeatMap({ eventId }: { eventId: number }) {
             <Typography variant="h6" color="primary" fontWeight={800}>${price}</Typography>
           </Box>
 
-          <Box sx={{ p: 4, overflowX: 'auto' }}>
-            <Stack spacing={2}>
+          <Box sx={{ p: 4, overflowX: 'auto', '&::-webkit-scrollbar': { height: 6 }, '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.1)', borderRadius: 10 } }}>
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 'fit-content' }}>
               {Array.from(rows.entries()).map(([rn, rs]) => (
-                <Stack key={rn} direction="row" spacing={2} alignItems="center" justifyContent="center" sx={{ mb: 1 }}>
-                  <Typography sx={{ width: 30, fontWeight: 800, color: 'text.secondary', fontSize: '0.8rem', textAlign: 'right' }}>
-                    {rn}
-                  </Typography>
-                  <Stack direction="row" spacing={1}>
-                    {rs.map(seat => (
-                      <SeatButton
-                        key={seat.id}
-                        seat={seat}
-                        currentUserId={currentUserId}
-                        statusStyles={statusStyles}
-                        theme={theme}
-                      />
-                    ))}
-                  </Stack>
-                </Stack>
+                <SeatRow key={rn} rowName={rn} seats={rs} currentUserId={currentUserId} />
               ))}
-            </Stack>
+            </div>
           </Box>
         </Card>
       ))}

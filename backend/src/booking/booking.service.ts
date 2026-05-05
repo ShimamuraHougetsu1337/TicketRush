@@ -359,4 +359,41 @@ export class BookingService {
       orderBy: { lockedAt: 'asc' }
     });
   }
+
+  /* ================================================================
+     7.  ADMIN DETAILED VIEWS (Orders & Sold Tickets)
+     ================================================================ */
+
+  async getAllOrders() {
+    return this.prisma.order.findMany({
+      include: {
+        user: {
+          select: { id: true, fullName: true, email: true }
+        },
+        event: {
+          select: { id: true, title: true, startTime: true }
+        },
+        seats: {
+          include: { zone: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async getSoldTickets() {
+    return this.prisma.seat.findMany({
+      where: { status: SeatStatus.SOLD },
+      include: {
+        event: { select: { id: true, title: true, startTime: true } },
+        zone: { select: { id: true, name: true, price: true } },
+        order: {
+          include: {
+            user: { select: { id: true, fullName: true, email: true } }
+          }
+        }
+      },
+      orderBy: { order: { createdAt: 'desc' } }
+    });
+  }
 }

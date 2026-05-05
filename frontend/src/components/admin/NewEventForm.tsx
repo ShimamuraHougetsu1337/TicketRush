@@ -82,7 +82,7 @@ export default function NewEventForm({ accessToken }: { accessToken: string }) {
           const errorText = await uploadRes.text();
           throw new Error(`Upload failed (${uploadRes.status}): ${errorText || 'Internal Server Error'}`);
         }
-        
+
         const uploadData = await uploadRes.json();
         finalBannerUrl = uploadData.url;
       }
@@ -102,7 +102,7 @@ export default function NewEventForm({ accessToken }: { accessToken: string }) {
       router.push('/admin/events');
     } catch (err: any) {
       setError(err.message);
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
@@ -110,7 +110,7 @@ export default function NewEventForm({ accessToken }: { accessToken: string }) {
     <form onSubmit={handleSubmit(onSubmit)}>
       <Stack spacing={4}>
         {error && <Alert severity="error" sx={{ mb: 4, borderRadius: 3, fontWeight: 700 }}>{error}</Alert>}
-        
+
         <Card sx={{ borderRadius: 5, border: '1px solid rgba(255,255,255,0.05)', background: alpha('#fff', 0.01) }}>
           <CardContent sx={{ p: 4 }}>
             <Typography variant="h6" fontWeight={800} sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -131,16 +131,38 @@ export default function NewEventForm({ accessToken }: { accessToken: string }) {
                 <TextField fullWidth label="Location" {...register('location')} />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 800, mb: 1, display: 'block' }}>Banner Image</Typography>
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Button variant="outlined" component="label" sx={{ borderRadius: 2 }}>
-                      Upload File
-                      <input type="file" hidden accept="image/*" onChange={handleFileChange} />
-                    </Button>
-                    {selectedFile && <Typography variant="caption">{selectedFile.name}</Typography>}
-                  </Stack>
-                </Box>
+                <TextField
+                  fullWidth
+                  label="Banner Image"
+                  value={selectedFile ? selectedFile.name : ''}
+                  placeholder="No file selected"
+                  InputLabelProps={{ shrink: true }}
+                  InputProps={{
+                    readOnly: true,
+                    startAdornment: (
+                      <Button
+                        variant="contained"
+                        component="label"
+                        size="small"
+                        sx={{
+                          mr: 2,
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          background: alpha(theme.palette.primary.main, 0.1),
+                          color: theme.palette.primary.main,
+                          boxShadow: 'none',
+                          '&:hover': {
+                            background: alpha(theme.palette.primary.main, 0.2),
+                            boxShadow: 'none',
+                          },
+                        }}
+                      >
+                        Browse
+                        <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+                      </Button>
+                    ),
+                  }}
+                />
               </Grid>
               {previewUrl && (
                 <Grid item xs={12}>
