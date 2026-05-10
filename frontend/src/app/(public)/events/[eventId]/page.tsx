@@ -10,7 +10,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 async function getEvent(eventId: string) {
   const res = await fetch(`${API_URL}/api/events/${eventId}`, {
-    next: { revalidate: 60 },
+    cache: 'no-store',
   });
 
   if (!res.ok) return null;

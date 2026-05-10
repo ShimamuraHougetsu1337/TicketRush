@@ -43,7 +43,7 @@ const STATUS_CONFIG = (theme: any) => ({
     border: '1px solid #f59e0b',
     color: '#000',
     cursor: 'pointer',
-    shadow: '0 0 15px rgba(245, 158, 11, 0.4)'
+    shadow: '0 0 15px rgba(245, 158, 11, 0.6)'
   },
   SOLD: {
     bg: alpha('#ef4444', 0.05),

@@ -3,8 +3,10 @@
 import React, { useState } from 'react';
 import {
   Box, Typography, Card, CardContent, Stack, alpha, useTheme, Chip, LinearProgress, Button,
-  IconButton, Snackbar, Alert
+  IconButton, Snackbar, Alert, Fade, Tooltip
 } from '@mui/material';
+import { io } from 'socket.io-client';
+import useSWR from 'swr';
 import Grid from '@mui/material/Unstable_Grid2';
 import {
   TrendingUp as RevenueIcon,
@@ -25,7 +27,6 @@ import StatCard from './admin/StatCard';
 import DemographicsCharts from './admin/DemographicsCharts';
 import EditEventModal from './admin/EditEventModal';
 import DeleteConfirmDialog from './admin/DeleteConfirmDialog';
-import { mutate } from 'swr';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -36,16 +37,56 @@ interface AdminDashboardProps {
 
 export default function AdminDashboard({ initialData, accessToken }: AdminDashboardProps) {
   const theme = useTheme();
-  const [data, setData] = useState(initialData?.stats || []);
-  const [demographics] = useState(initialData?.demographics || null);
+  const fetcher = (url: string) => fetch(url, {
+    headers: { 'Authorization': `Bearer ${accessToken}` }
+  }).then(res => res.json());
+
+  const { data: stats = [], mutate: mutateStats } = useSWR(
+    `${API_URL}/api/booking/admin/analytics`,
+    fetcher,
+    { 
+      fallbackData: initialData?.stats,
+      refreshInterval: 10000 
+    }
+  );
+
+  const { data: demographics = null } = useSWR(
+    `${API_URL}/api/admin/analytics/demographics`,
+    fetcher,
+    { 
+      fallbackData: initialData?.demographics,
+      refreshInterval: 60000 
+    }
+  );
+
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [deletingEvent, setDeletingEvent] = useState<any>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [isLive, setIsLive] = useState(false);
+
+  React.useEffect(() => {
+    const socket = io(API_URL + '/admin-dashboard', {
+      transports: ['websocket'],
+    });
+
+    socket.on('connect', () => setIsLive(true));
+    socket.on('disconnect', () => setIsLive(false));
+    socket.on('dashboardUpdate', () => {
+      mutateStats();
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [mutateStats]);
+
+  const data = stats;
 
   const handleEditSuccess = () => {
     setSuccessMsg('Event updated successfully!');
     setEditingEvent(null);
+    mutateStats();
   };
 
   const handleDelete = async () => {
@@ -57,8 +98,7 @@ export default function AdminDashboard({ initialData, accessToken }: AdminDashbo
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
       if (!res.ok) throw new Error('Failed to delete event');
-      setData(data.filter((e: any) => e.id !== deletingEvent.id));
-      mutate(`${API_URL}/api/events`);
+      mutateStats();
       setSuccessMsg('Event deleted successfully!');
       setDeletingEvent(null);
     } catch (err: any) {
@@ -86,7 +126,7 @@ export default function AdminDashboard({ initialData, accessToken }: AdminDashbo
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto', py: 8, px: 4 }}>
-      <DashboardHeader eventCount={data.length} />
+      <DashboardHeader eventCount={data.length} isLive={isLive} onRefresh={() => mutateStats()} />
 
       <Grid container spacing={4} sx={{ mb: 8 }}>
         <Grid xs={12} md={6}>

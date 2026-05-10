@@ -51,7 +51,6 @@ export class SeatsGateway
     this.logger.log(`Client ${client.id} left room ${room}`);
   }
 
-  /** Called by BookingService to push seat status changes to all viewers */
   broadcastSeatUpdate(
     eventId: number,
     seats: { id: number; status: string; lockedById?: number | null }[],

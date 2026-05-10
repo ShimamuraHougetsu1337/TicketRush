@@ -3,10 +3,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateEventDto, UpdateEventDto } from './dto/event.dto';
 import { CreateZoneDto } from './dto/zone.dto';
 import { Prisma, EventStatus } from '@prisma/client';
+import { DashboardGateway } from '../../booking/dashboard.gateway';
 
 @Injectable()
 export class EventsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private dashboardGateway: DashboardGateway
+  ) {}
 
   private getRowName(index: number): string {
     let rowName = '';
@@ -65,10 +69,13 @@ export class EventsService {
       }
 
       // 3. Return the created event with zones using the transaction client
-      return tx.event.findUnique({
+      const result = await tx.event.findUnique({
         where: { id: event.id },
         include: { zones: true },
       });
+
+      this.dashboardGateway.broadcastUpdate();
+      return result;
     });
   }
 
@@ -95,22 +102,26 @@ export class EventsService {
   }
 
   async updateEvent(id: number, data: UpdateEventDto) {
-    return this.prisma.event.update({
+    const updated = await this.prisma.event.update({
       where: { id },
       data: {
         ...data,
         startTime: data.startTime ? new Date(data.startTime) : undefined,
       },
     });
+    this.dashboardGateway.broadcastUpdate();
+    return updated;
   }
 
   async deleteEvent(id: number) {
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const deleted = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.seat.deleteMany({ where: { eventId: id } });
       await tx.zone.deleteMany({ where: { eventId: id } });
       await tx.order.deleteMany({ where: { eventId: id } });
       return tx.event.delete({ where: { id } });
     });
+    this.dashboardGateway.broadcastUpdate();
+    return deleted;
   }
 
   async createZoneWithSeats(eventId: number, data: CreateZoneDto) {

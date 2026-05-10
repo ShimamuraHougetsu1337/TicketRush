@@ -8,11 +8,11 @@ interface StatusLegendProps {
 }
 
 const LEGEND_ITEMS = [
-  ['AVAILABLE', 'Available'],
-  ['SELECTED', 'Selected'],
-  ['MY_LOCK', 'Your Seats'],
-  ['LOCKED', 'Occupied'],
-  ['SOLD', 'Sold']
+  ['AVAILABLE', 'Ghế trống'],
+  ['SELECTED', 'Đang chọn'],
+  ['MY_LOCK', 'Ghế của bạn'],
+  ['LOCKED', 'Đã giữ'],
+  ['SOLD', 'Đã bán']
 ] as const;
 
 export default function StatusLegend({ statusStyles }: StatusLegendProps) {

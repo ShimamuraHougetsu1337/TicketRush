@@ -70,7 +70,7 @@ interface Props {
 
 export default function TopNav(props: Props) {
   const { window } = props;
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -298,7 +298,9 @@ export default function TopNav(props: Props) {
             </>
           )}
 
-          {session ? (
+          {status === 'loading' ? (
+            <Box sx={{ width: 100, height: 40, borderRadius: 2, background: alpha('#fff', 0.05) }} />
+          ) : session ? (
             <>
               <IconButton
                 onClick={handleOpenMenu}

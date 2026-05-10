@@ -16,7 +16,7 @@ async function getEvents(search?: string) {
     if (search) url.searchParams.append('search', search);
 
     const res = await fetch(url.toString(), {
-      next: { revalidate: 60 }
+      cache: 'no-store'
     });
 
     if (!res.ok) {

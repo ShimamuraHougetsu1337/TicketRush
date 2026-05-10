@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SeatStatus, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { SeatsGateway } from './seats.gateway';
+import { DashboardGateway } from './dashboard.gateway';
 
 /* ──────────────────────────────────────────────────────────────
    BookingService – race-condition-safe seat locking & checkout
@@ -22,6 +23,7 @@ export class BookingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly seatsGateway: SeatsGateway,
+    private readonly dashboardGateway: DashboardGateway,
   ) { }
 
   /* ================================================================
@@ -107,6 +109,7 @@ export class BookingService {
 
     // Broadcast to connected clients
     this.seatsGateway.broadcastSeatUpdate(eventId, lockedSeats);
+    this.dashboardGateway.broadcastUpdate();
 
     this.logger.log(
       `User ${userId} locked seats [${uniqueIds}] for event ${eventId}`,
@@ -204,6 +207,7 @@ export class BookingService {
       lockedAt: null,
     }));
     this.seatsGateway.broadcastSeatUpdate(eventId, soldSeats);
+    this.dashboardGateway.broadcastUpdate();
 
     this.logger.log(
       `Order #${order.id} confirmed – seats [${uniqueIds}] for event ${eventId}`,
@@ -271,13 +275,11 @@ export class BookingService {
       lockedAt: null,
     }));
     this.seatsGateway.broadcastSeatUpdate(eventId, releasedSeats);
+    this.dashboardGateway.broadcastUpdate();
 
     return { released: uniqueIds };
   }
 
-  /* ================================================================
-     4.  FETCH SEATS FOR EVENT (for seat-map UI)
-     ================================================================ */
 
   async getSeatsForEvent(eventId: number) {
     return this.prisma.seat.findMany({
@@ -287,9 +289,6 @@ export class BookingService {
     });
   }
 
-  /* ================================================================
-     5.  ADMIN ANALYTICS
-     ================================================================ */
 
   async getEventAnalytics(eventId: number) {
     const [totalSeats, soldSeats, lockedSeats, revenue] = await Promise.all([
@@ -329,9 +328,6 @@ export class BookingService {
     return analytics;
   }
 
-  /* ================================================================
-     6.  USER TICKETS
-     ================================================================ */
 
   async getUserTickets(userId: number) {
     return this.prisma.order.findMany({
@@ -360,9 +356,6 @@ export class BookingService {
     });
   }
 
-  /* ================================================================
-     7.  ADMIN DETAILED VIEWS (Orders & Sold Tickets)
-     ================================================================ */
 
   async getAllOrders() {
     return this.prisma.order.findMany({

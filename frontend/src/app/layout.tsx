@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
 import MuiThemeProvider from '@/components/MuiThemeProvider';
 import NextAuthProvider from '@/providers/NextAuthProvider';
@@ -20,7 +21,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body style={{ margin: 0 }}>
         <NextAuthProvider>
           <MuiThemeProvider>
-            <TopNav />
+            <Suspense>
+              <TopNav />
+            </Suspense>
             {children}
           </MuiThemeProvider>
         </NextAuthProvider>

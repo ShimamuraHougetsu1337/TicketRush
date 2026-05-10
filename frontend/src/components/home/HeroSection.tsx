@@ -19,7 +19,7 @@ import { useSession } from 'next-auth/react';
 
 export default function HeroSection() {
   const theme = useTheme();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   const scrollToEvents = () => {
     document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -85,7 +85,9 @@ export default function HeroSection() {
               Explore Events
             </Button>
 
-            {session ? (
+            {status === 'loading' ? (
+              <Box sx={{ width: 140, height: 48, borderRadius: 3, background: alpha('#fff', 0.05) }} />
+            ) : session ? (
               <Button
                 variant="outlined"
                 size="large"
