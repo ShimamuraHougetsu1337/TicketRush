@@ -21,7 +21,7 @@ async function getMyTickets(accessToken: string) {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
     },
-    cache: 'no-store', // Always get fresh tickets
+    cache: 'no-store',
   });
 
   if (!res.ok) return [];

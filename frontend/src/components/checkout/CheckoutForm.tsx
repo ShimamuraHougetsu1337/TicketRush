@@ -37,7 +37,6 @@ export default function CheckoutForm({ initialSeats, accessToken }: CheckoutForm
   const [error, setError] = useState<string | null>(null);
   const [confirmingEventId, setConfirmingEventId] = useState<number | null>(null);
   const [releasingEventId, setReleasingEventId] = useState<number | null>(null);
-  const [isExpired, setIsExpired] = useState(false);
 
   const handleConfirm = async (eventId: number, eventSeats: any[]) => {
     setConfirmingEventId(eventId);
@@ -100,7 +99,7 @@ export default function CheckoutForm({ initialSeats, accessToken }: CheckoutForm
     }
   };
 
-  if (seats.length === 0 || isExpired) {
+  if (seats.length === 0) {
     return (
       <Container maxWidth="sm" sx={{ py: 15, textAlign: 'center' }}>
         <Box sx={{ p: 4, borderRadius: 4, background: alpha(theme.palette.warning.main, 0.05), border: `1px dashed ${alpha(theme.palette.warning.main, 0.2)}`, mb: 4 }}>
@@ -144,7 +143,7 @@ export default function CheckoutForm({ initialSeats, accessToken }: CheckoutForm
                 <Paper elevation={0} sx={{ p: 4, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                     <Typography variant="h5" fontWeight={800}>Order Summary</Typography>
-                    <CheckoutTimer seats={eventSeats} onExpire={() => setIsExpired(true)} />
+                    <CheckoutTimer seats={eventSeats} onExpire={() => mutate(`${API}/api/booking/my-locks`)} />
                   </Box>
 
                   <Box sx={{ mb: 4 }}>
@@ -198,7 +197,7 @@ export default function CheckoutForm({ initialSeats, accessToken }: CheckoutForm
                         fullWidth
                         variant="contained"
                         size="large"
-                        disabled={confirmingEventId === eventIdNum || isExpired || releasingEventId === eventIdNum}
+                        disabled={confirmingEventId === eventIdNum || releasingEventId === eventIdNum}
                         onClick={() => handleConfirm(eventIdNum, eventSeats)}
                         startIcon={confirmingEventId === eventIdNum ? <CircularProgress size={20} color="inherit" /> : <PaymentIcon />}
                         sx={{ py: 2, borderRadius: 4, fontWeight: 800, fontSize: '1.1rem' }}
@@ -210,7 +209,7 @@ export default function CheckoutForm({ initialSeats, accessToken }: CheckoutForm
                         variant="outlined"
                         color="error"
                         size="large"
-                        disabled={confirmingEventId === eventIdNum || isExpired || releasingEventId === eventIdNum}
+                        disabled={confirmingEventId === eventIdNum || releasingEventId === eventIdNum}
                         onClick={() => handleRelease(eventIdNum, eventSeats)}
                         sx={{ py: 1.5, borderRadius: 4, fontWeight: 800 }}
                       >
