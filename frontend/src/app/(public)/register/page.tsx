@@ -16,9 +16,11 @@ import {
   useTheme,
   MenuItem,
   Grid,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
 import Link from 'next/link';
-import { PersonAddAlt1 as RegisterIcon, ArrowForward } from '@mui/icons-material';
+import { PersonAddAlt1 as RegisterIcon, ArrowForward, Visibility, VisibilityOff } from '@mui/icons-material';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -32,6 +34,7 @@ export default function RegisterPage() {
   const [gender, setGender] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,10 +163,24 @@ export default function RegisterPage() {
                 required
                 fullWidth
                 label="Password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowPassword(!showPassword)}
+                        onMouseDown={(e) => e.preventDefault()}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
 
               <Button

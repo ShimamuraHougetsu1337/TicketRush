@@ -15,9 +15,11 @@ import {
   Stack,
   alpha,
   useTheme,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
 import Link from 'next/link';
-import { LockOutlined as LockIcon, Login as LoginIcon } from '@mui/icons-material';
+import { LockOutlined as LockIcon, Login as LoginIcon, Visibility, VisibilityOff } from '@mui/icons-material';
 
 export default function LoginPage() {
   const theme = useTheme();
@@ -26,6 +28,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,12 +118,26 @@ export default function LoginPage() {
                 fullWidth
                 name="password"
                 label="Password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 id="password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowPassword(!showPassword)}
+                        onMouseDown={(e) => e.preventDefault()}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
 
               <Button

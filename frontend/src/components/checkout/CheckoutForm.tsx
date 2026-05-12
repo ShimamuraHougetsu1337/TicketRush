@@ -45,7 +45,6 @@ export default function CheckoutForm({ initialEvent, initialSeats, eventId, acce
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.message || 'Payment failed or seats expired');
-        setConfirming(false);
       }
       router.push('/my-tickets');
     } catch (err: any) {
