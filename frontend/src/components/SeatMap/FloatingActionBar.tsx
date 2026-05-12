@@ -43,7 +43,7 @@ export default function FloatingActionBar({ eventId, myLockedIds }: FloatingActi
       });
       if (!r.ok) { const e = await r.json(); throw new Error(e.message ?? 'Request failed'); }
       clearSelection();
-      mutate(`${API}/api/booking/my-locks`); 
+      mutate(`${API}/api/booking/my-locks`);
       if (redirectUrl) router.push(redirectUrl);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
@@ -53,7 +53,7 @@ export default function FloatingActionBar({ eventId, myLockedIds }: FloatingActi
     if (selectedIds.size > 0) {
       doPost('/api/booking/lock', Array.from(selectedIds));
     } else if (myLockedIds.length > 0) {
-      router.push(`/checkout?eventId=${eventId}`);
+      router.push(`/checkout`);
     }
   };
 

@@ -29,9 +29,8 @@ export default function LockCountdown({ seats, currentUserId }: LockCountdownPro
       const diff = expiryTime - now;
 
       if (diff <= 0) {
-        setTimeLeft('Expired');
+        setTimeLeft('0:00');
         clearInterval(interval);
-        window.location.reload(); 
       } else {
         const mins = Math.floor(diff / 60000);
         const secs = Math.floor((diff % 60000) / 1000);

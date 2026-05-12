@@ -10,6 +10,7 @@ import { Metadata } from 'next';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+
 export const metadata: Metadata = {
   title: 'My Tickets | TicketRush',
   description: 'View and manage your event tickets.',
@@ -22,7 +23,7 @@ async function getMyTickets(accessToken: string) {
     },
     cache: 'no-store', // Always get fresh tickets
   });
-  
+
   if (!res.ok) return [];
   return res.json();
 }

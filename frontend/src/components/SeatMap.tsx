@@ -92,8 +92,14 @@ export default function SeatMap({ eventId }: { eventId: number }) {
   }, [session, setCurrentUserId]);
 
   const fetchSeats = useCallback(async () => {
-    setSeats([]);
-    useSeatStore.getState().clearSelection();
+    const currentSeats = useSeatStore.getState().seats;
+    const isSameEvent = currentSeats.length > 0 && currentSeats[0].eventId === eventId;
+
+    if (!isSameEvent) {
+      setSeats([]);
+      useSeatStore.getState().clearSelection();
+    }
+    
     setLoading(true);
     try {
       const r = await fetch(`${API}/api/booking/events/${eventId}/seats`);
