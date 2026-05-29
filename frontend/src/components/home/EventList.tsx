@@ -27,7 +27,7 @@ export default function EventList({ events, searchQuery }: EventListProps) {
       <Box sx={{ mb: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <Box>
           <Typography variant="h3" sx={{ mb: 1, fontFamily: '"Outfit", sans-serif' }}>
-            {searchQuery ? `Search Results for "${searchQuery}"` : 'Upcoming Events'}
+            {searchQuery ? `Search Results for "${searchQuery}"` : 'Events'}
           </Typography>
           <Typography variant="body1" color="text.secondary">
             {searchQuery ? `${filteredEvents?.length || 0} events found` : 'Handpicked experiences just for you'}

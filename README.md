@@ -1,108 +1,120 @@
 # 🎫 TicketRush
 
-Nền tảng đặt vé trực tuyến hiệu năng cao (High-concurrency), hỗ trợ bản đồ ghế ngồi thời gian thực, cơ chế khóa (Pessimistic Locking) và hệ thống quản lý vòng đời sự kiện tự động.
-
-![NestJS](https://img.shields.io/badge/NestJS-11-ea2845?style=flat-square&logo=nestjs)
-![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=flat-square&logo=next.js)
-![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?style=flat-square&logo=prisma)
-![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?style=flat-square&logo=mysql&logoColor=white)
-![Socket.IO](https://img.shields.io/badge/Socket.IO-4-010101?style=flat-square&logo=socket.io)
+Nền tảng đặt vé trực tuyến hiệu năng cao (High-concurrency), hỗ trợ bản đồ ghế ngồi thời gian thực, cơ chế khóa bi quan (Pessimistic Locking) và hệ thống quản lý vòng đời sự kiện tự động.
 
 ---
 
 ## 🚀 Tính năng cốt lõi
 
-*   **Đồng bộ thời gian thực**: Cập nhật tức thì trạng thái ghế (Trống/Đang giữ/Đã bán) qua WebSocket (Socket.io).
-*   **Pessimistic Locking**: Ngăn chặn tình trạng đặt trùng ghế bằng cơ chế `SELECT ... FOR UPDATE` ở mức cơ sở dữ liệu.
-*   **Countdown Timer**: Hệ thống đếm ngược 10 phút tích hợp tại bản đồ ghế và trang thanh toán để đảm bảo tính thời sự của phiên giữ chỗ.
-*   **Global Checkout Reminder**: Thông báo nhắc nhở thông minh trên Thanh điều hướng (Navbar) giúp người dùng dễ dàng quay lại hoàn tất thanh toán.
-*   **Tự động hóa hệ thống**: Sử dụng Cron Jobs để tự động giải phóng ghế hết hạn và chuyển đổi trạng thái sự kiện theo thời gian thực.
-*   **Quản trị sự kiện nâng cao**: Admin có khả năng chỉnh sửa thông tin sự kiện linh hoạt và theo dõi doanh thu qua Dashboard 2.0.
+*   **Đồng bộ thời gian thực**: Cập nhật tức thì trạng thái ghế (Trống/Đang giữ/Đã bán) qua WebSocket (Socket.IO).
+*   **Chống trùng ghế (Pessimistic Locking)**: Ngăn chặn tình trạng đặt trùng ghế bằng cơ chế `SELECT ... FOR UPDATE` ở mức cơ sở dữ liệu.
+*   **Giữ chỗ & Đếm ngược**: Khóa ghế tạm thời 10 phút kèm đếm ngược để người dùng hoàn tất thanh toán.
+*   **Tự động hóa hệ thống**: Sử dụng Cron Jobs chạy nền để tự động giải phóng ghế hết hạn và cập nhật trạng thái sự kiện.
+*   **Dashboard quản trị**: Theo dõi doanh thu thời gian thực, tỷ lệ lấp đầy và thống kê nhân khẩu học khách hàng.
 
----
-
-## 📐 Kiến trúc hệ thống
-
-Dự án TicketRush được xây dựng theo kiến trúc **Monolith hiện đại** (Modular Monolith) với sự tách biệt rõ ràng giữa các tầng (Layered Architecture) để đảm bảo khả năng mở rộng và xử lý tranh chấp dữ liệu ở mức độ cao.
-
-### Sơ đồ tổng quát
-![Kiến trúc hệ thống](./assets/architecture.png)
-
-### Chi tiết các thành phần
-
-1.  **Frontend (Next.js 14)**:
-    *   **Customer Portal**: Tìm kiếm, xem sự kiện và đặt vé. Tích hợp **Countdown Timer** (10 phút) để quản lý phiên giữ chỗ.
-    *   **Real-time Seat Map**: Sử dụng WebSocket để cập nhật trạng thái ghế ngay lập tức mà không cần tải lại trang (F5).
-    *   **Admin Dashboard**: Quản lý toàn diện sự kiện, sơ đồ ghế và theo dõi doanh thu/tỷ lệ lấp đầy qua biểu đồ trực quan.
-
-2.  **Backend (NestJS 11)**:
-    *   **Pessimistic Locking**: Sử dụng cơ chế `SELECT ... FOR UPDATE` trong Transaction để giải quyết tranh chấp (Race Condition) khi hàng ngàn người cùng đặt một ghế.
-    *   **Socket.IO Gateway**: Quản lý các kết nối thời gian thực, đảm bảo tính đồng bộ dữ liệu giữa tất cả các Client.
-    *   **Cron Scheduler**: Tác vụ chạy nền tự động quét và giải phóng các ghế `LOCKED` quá 10 phút, đưa chúng về trạng thái `AVAILABLE`.
-    *   **Analytics Service**: Xử lý dữ liệu nhân khẩu học (độ tuổi, giới tính) và doanh thu thực tế để phục vụ báo cáo Admin.
-
-3.  **Database (MySQL 8)**:
-    *   Sử dụng **InnoDB Engine** để hỗ trợ Row-level Locking và ACID Transactions.
-    *   **Prisma ORM**: Đảm bảo Type-safety và tối ưu hóa các câu lệnh truy vấn phức tạp.
-
----
 ---
 
 ## 🛠️ Công nghệ sử dụng
 
-- **Frontend**: Next.js 14 (App Router), Material UI v5, Zustand, SWR.
-- **Backend**: NestJS 11, Prisma ORM, JWT Authentication.
-- **Database**: MySQL 8 (Sử dụng InnoDB để đảm bảo tính toàn vẹn giao dịch).
-- **Giao tiếp**: REST API & WebSocket (Socket.io).
+- **Frontend**: Next.js 14 (App Router), Material UI v5, Zustand, SWR, Socket.io-client.
+- **Backend**: NestJS 11, Prisma ORM, WebSockets (Socket.IO).
+- **Database**: MySQL 8.
 
 ---
 
-## 💻 Hướng dẫn cài đặt
+## 💻 Hướng dẫn cài đặt & Khởi chạy
 
-### 1. Cấu hình Backend
+### Yêu cầu hệ thống
+- Node.js >= 18.x
+- Docker (Khuyên dùng để chạy nhanh Database) HOẶC MySQL Server >= 8.0 đã cài trên máy.
+
+---
+
+### Bước 1: Khởi chạy Cơ sở dữ liệu MySQL
+
+Bạn có thể lựa chọn 1 trong 2 cách sau:
+
+#### Cách 1: Sử dụng Docker (Khuyên dùng - Nhanh nhất)
+Dự án đã cấu hình sẵn Docker Compose. Bạn chỉ cần chạy lệnh sau tại thư mục gốc của dự án:
 ```bash
-cd backend
-npm install
-# Cấu hình DATABASE_URL trong file .env
-npx prisma db push
-npx prisma db seed
-npm run dev
+docker compose up -d
 ```
+*Lệnh này sẽ tự động tải, tạo container và khởi chạy MySQL với thông tin cấu hình khớp sẵn với dự án (Port `3306`, Database tên `ticketrush`, password là `root`).*
 
-### 2. Cấu hình Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Tài khoản Demo
-| Vai trò | Email | Mật khẩu |
-|---|---|---|
-| **Quản trị viên** | `admin@gmail.com` | `123456` |
-| **Khách hàng** | `user@gmail.com` | `123456` |
+#### Cách 2: Sử dụng MySQL Server cài trên máy
+Nếu sử dụng MySQL cài trực tiếp trên máy:
+*   Hãy đảm bảo dịch vụ MySQL đang chạy.
+*   **Lưu ý:** Bạn **không cần tạo thủ công database**. Khi bạn chạy lệnh đồng bộ schema ở Bước 2, Prisma sẽ tự động tạo cơ sở dữ liệu mới nếu nó chưa tồn tại.
 
 ---
 
-## 🔒 Cơ chế nghiệp vụ quan trọng
+### Bước 2: Cài đặt và Cấu hình Backend
 
-### 1. Vòng đời của Ghế (Seat Lifecycle)
-Dựa trên yêu cầu khắt khe về tính nhất quán, mỗi ghế trong hệ thống trải qua các trạng thái sau:
-
-![Vòng đời của Ghế](./assets/seat_lifecycle.png)
-
-### 2. Ngăn chặn Race Condition (Pessimistic Locking)
-Để xử lý hàng ngàn request cùng lúc cho một ghế (Flash Sale), hệ thống áp dụng cơ chế khóa bi quan:
-*   **Transaction Isolation**: Sử dụng mức cô lập `Serializable` kết hợp với `SELECT ... FOR UPDATE`.
-*   **Atomic Updates**: Việc kiểm tra trạng thái và cập nhật `LOCKED` được thực hiện trong một đơn vị giao dịch duy nhất tại Database.
-*   **Double-Check**: Ngay sau khi chiếm hữu khóa dòng, hệ thống kiểm tra lại điều kiện `status = 'AVAILABLE'` trước khi ghi dữ liệu.
-
-### 3. Tự động hóa & Real-time
-*   **Cron Job Engine**: Chạy định kỳ mỗi phút để quét các bản ghi `locked_at` cũ hơn 10 phút. Khi giải phóng, hệ thống đồng thời phát tín hiệu `broadcast` qua WebSocket để cập nhật giao diện tất cả người dùng khác.
-*   **Socket.IO Rooms**: Phân tách luồng dữ liệu theo `eventId` để tối ưu hóa băng thông, chỉ gửi thông tin cập nhật đến những người dùng đang xem cùng một sự kiện.
-
-### 4. Thống kê & Phân tích (Analytics)
-*   **Demographics**: Thu thập và phân tích dữ liệu độ tuổi, giới tính của khán giả để hỗ trợ BTC tối ưu chiến dịch Marketing.
-*   **Real-time Revenue**: Dashboard Admin cập nhật doanh thu và tỷ lệ lấp đầy (Fill-rate) theo thời gian thực bằng thư viện `@mui/x-charts`.
+1. Di chuyển vào thư mục backend:
+   ```bash
+   cd backend
+   ```
+2. Cài đặt các thư viện:
+   ```bash
+   npm install
+   ```
+3. Tạo file `.env` từ `.env.example`:
+   * Trên Windows: `copy .env.example .env`
+   * Trên Linux / macOS: `cp .env.example .env`
+4. Cấu hình kết nối cơ sở dữ liệu trong `.env`:
+   * Nếu dùng **Docker** (Cách 1 ở Bước 1):
+     ```env
+     DATABASE_URL="mysql://root:root@localhost:3306/ticketrush"
+     PORT=8080
+     JWT_SECRET="ticketrush_secret"
+     ```
+   * Nếu dùng **MySQL cài trên máy** (Cách 2 ở Bước 1): Thay thế `root:root` và cổng `3306` bằng tài khoản MySQL của bạn.
+5. Đồng bộ hóa cấu trúc bảng (Prisma sẽ tự động tạo database nếu chưa có) và nạp dữ liệu mẫu:
+   ```bash
+   npx prisma db push
+   npx prisma db seed
+   ```
+6. Khởi chạy backend:
+   ```bash
+   npm run dev
+   ```
+   *Backend chạy tại:* [http://localhost:8080](http://localhost:8080)
 
 ---
+
+### Bước 3: Cài đặt và Cấu hình Frontend
+
+1. Di chuyển vào thư mục frontend:
+   ```bash
+   cd frontend
+   ```
+2. Cài đặt các thư viện:
+   ```bash
+   npm install
+   ```
+3. Tạo file `.env.local` từ `.env.example`:
+   * Trên Windows: `copy .env.example .env.local`
+   * Trên Linux / macOS: `cp .env.example .env.local`
+4. Cập nhật các đường dẫn API trong `.env.local`:
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:8080
+   NEXT_PUBLIC_WS_URL=http://localhost:8080/seats
+   NEXTAUTH_URL=http://localhost:3000
+   NEXTAUTH_SECRET="your_nextauth_secret_key_minimum_32_characters"
+   ```
+5. Khởi chạy frontend:
+   ```bash
+   npm run dev
+   ```
+   *Frontend chạy tại:* [http://localhost:3000](http://localhost:3000)
+
+---
+
+## 👥 Tài khoản Demo dùng thử
+
+Hệ thống tự động tạo sẵn các tài khoản sau sau khi chạy lệnh seed:
+
+| Vai trò | Email đăng nhập | Mật khẩu mặc định | Trang trải nghiệm |
+| :--- | :--- | :--- | :--- |
+| **Quản trị viên (Admin)** | `admin@gmail.com` | `123456` | [http://localhost:3000/admin](http://localhost:3000/admin) |
+| **Khách hàng (Customer)** | `user@gmail.com` | `123456` | [http://localhost:3000](http://localhost:3000) |
